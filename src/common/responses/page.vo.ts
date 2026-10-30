@@ -1,5 +1,3 @@
-import { ApiProperty } from '@nestjs/swagger';
-
 /**
  * 通用分页响应结构：作为 ApiResponse.data 的分页形态。
  * 泛型接口（非 class），与 ORM/序列化无耦合；由 buildPage 构造，TransformInterceptor 统一包壳。

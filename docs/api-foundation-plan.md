@@ -169,7 +169,7 @@ PaginationDto（page/pageSize/sort 字段白名单防注入/keyword）→ query.
 | P2 | 审计模块 | ✅ | 含租户字段与脱敏；持久化待替换（见第七节） |
 | P2 | 测试体系 | ✅ | vitest + supertest（选型差异见第五节） |
 | P2 | 安全加固（throttler/helmet/CORS/body 限制） | ✅ | http-hardening.ts 统一接管 |
-| P2 | tsconfig strict + ESLint | ⚠️ 部分 | strict: true 已全量开启；ESLint 未引入 |
+| P2 | tsconfig strict + ESLint | ✅ | strict: true 已全量开启；ESLint 10 平面配置 + 类型感知规则已接入（common/infra 强制层，详见 6.4） |
 | P3 | 幂等键 | ✅ 提前 | @Idempotent + 在途合并（超出规划深度） |
 | P3 | 缓存层 | ✅ 部分 | cache-manager 内存态；Redis 接入待做 |
 | P3 | OpenAPI 规范导出 | ✅ 提前 | 导出脚本 + GitHub Pages 文档站 |
@@ -210,6 +210,22 @@ PaginationDto（page/pageSize/sort 字段白名单防注入/keyword）→ query.
 
 pnpm 严格布局下：**源码直接 import 的包必须声明为直接依赖**（如 express），不得依赖提升的传递依赖（幽灵依赖）。
 
+### 6.4 代码质量门禁（ESLint）
+
+工具链：ESLint 10 平面配置（`eslint.config.mjs`）+ typescript-eslint 8（projectService 类型感知）+ @eslint/js。命令：`pnpm lint` / `pnpm lint:fix`；CI 在 prisma generate 之后、build 之前执行（类型感知规则依赖 @prisma/client 生成类型）。
+
+分层规则（自上而下覆盖）：
+
+| 层 | 范围 | 关键规则 |
+|----|------|----------|
+| 基线 | 全仓库 | @eslint/js 推荐 + typescript-eslint 推荐 |
+| 类型感知 | 全部 TS | no-floating-promises / no-misused-promises / await-thenable / no-unsafe-* 五件套 |
+| 全局纪律 | 全部 TS | src 禁裸 console（走 pino）、eqeqeq、no-var、prefer-const |
+| ★ 底座强制 | src/common、src/infra | 函数返回类型必须显式（契约签名）、禁非空断言 |
+| 豁免 | scripts、测试文件 | Node globals、console 放行、测试 mock 允许 any/unsafe |
+
+约定：新增禁用需逐处 `eslint-disable-next-line` 并附注释说明理由，禁止整文件豁免。
+
 ---
 
 ## 七、后续演进清单
@@ -218,6 +234,6 @@ pnpm 严格布局下：**源码直接 import 的包必须声明为直接依赖**
 2. **幂等 Redis 化**：跨实例/重启语义升级（header 契约不变）。
 3. **RBAC 阶段二**：user/role/permission 落库，按 `模块:动作` 粒度校验。
 4. **登出与设备管理**：refresh token 黑名单、多端登录策略。
-5. **ESLint 引入**：typescript-eslint 接入，对 common/infra 强制规则。
+5. **Prettier 接入**：与 ESLint 通过 eslint-config-prettier 对齐（当前格式化靠编辑器约定）。
 6. **生产就绪检查单**：强随机 JWT_SECRET（缺省 dev 密钥生产启动即失败）、CORS_ORIGINS 显式配置、数据库切换 PostgreSQL、日志聚合接入。
 7. **多租户深化**：X-Tenant-Id 已贯通审计，向数据隔离层演进。

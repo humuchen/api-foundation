@@ -36,6 +36,10 @@ jobs:
       - name: Generate Prisma Client
         run: pnpm exec prisma generate
 
+      # 类型感知 lint 依赖 @prisma/client 生成后的类型，必须在 generate 之后
+      - name: Lint
+        run: pnpm lint
+
       - name: Build
         run: pnpm build
 
