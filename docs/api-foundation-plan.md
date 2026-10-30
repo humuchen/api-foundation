@@ -1,295 +1,223 @@
-# 通用后端接口底座规划
+# 通用后端接口底座 —— 规划与实施状态
 
-> 适用项目：api-foundation（原 nestjs-v12-preview；NestJS 12.3.0 + Express + TypeScript 5.9, CommonJS）
-> 撰写日期：2026-10-30
+> 项目：api-foundation（NestJS 12.3.0 + Express 5 + TypeScript 5.9 strict + Prisma 6 / SQLite）
+> 当前版本：v0.4.0 ｜ 初始规划日期：2026-10-30 ｜ 本文更新日期：2026-10-30
+> 文档定位：由初始规划文档演进为**当前实现的事实文档**。规划与实际的差异在第四、五节逐项标注，新增能力契约以第三节为准。
 
 ---
 
-## 一、现状分析
+## 一、现状总览
 
-### 1.1 技术栈盘点
+初始规划的 P0（底座最小闭环）、P1（鉴权与数据层）、P2（治理增强）已**全部落地**；P3 中的幂等、缓存、OpenAPI 导出提前完成。项目已具备生产候选形态。
 
-| 维度 | 现状 | 评价 |
+| 维度 | 现状 | 说明 |
 |------|------|------|
-| 框架 | NestJS 12.3.0（preview 版本） | 较新，第三方生态包（swagger/jwt/passport 集成包）版本兼容性需逐一验证 |
-| HTTP 平台 | @nestjs/platform-express | 主流稳定 |
-| 语言 | TypeScript 5.9.3, target ES2021, CommonJS | 宽松模式（strictNullChecks=false, noImplicitAny=false），建议渐进收紧 |
-| 运行方式 | dev: node --watch + ts-node/transpile-only；prod: tsc 编译 | 合理，保留 |
-| 依赖 | 仅 core/common/platform-express/reflect-metadata/rxjs | 零横切能力，底座需补齐依赖 |
-| 数据层 | 无 ORM/驱动 | 待选型（P1 阶段） |
-| 测试 | 无 | P2 阶段补齐 |
-
-### 1.2 现有代码结构
-
-```
-src/
-├── main.ts                        # 4 行 bootstrap：硬编码 3000 端口，无全局管道/过滤器/前缀
-└── app/
-    ├── app.module.ts              # 根模块，空 imports
-    ├── controller/
-    │   ├── index.ts               # barrel export
-    │   └── hello.controller.ts    # GET / 与 GET /hello/world，直接返回 string
-    └── services/
-        ├── index.ts               # barrel export
-        └── hello.service.ts       # 返回拼接字符串
-```
-
-### 1.3 关键缺口
-
-1. **无统一响应格式**：接口直接返回裸字符串，与 Nest 默认 404 错误格式不一致。
-2. **无错误码体系**：异常处理依赖 Nest 默认输出。
-3. **无参数校验**：`@Query('name')` 直接取值，未安装 class-validator/class-transformer。
-4. **无鉴权与权限**：无 AuthModule、无守卫。
-5. **无日志与审计**：使用 Nest 内置 Logger，无请求链路 ID、无耗时统计、无审计。
-6. **无分页/查询能力**：无 PaginationDto。
-7. **无配置管理**：端口硬编码，无 @nestjs/config。
-8. **无 API 文档、无测试、无优雅停机**。
+| 框架 | NestJS 12.3.0（正式版） | swagger/jwt/passport/throttler 集成包均以 v12 兼容版本锁定 |
+| HTTP 平台 | @nestjs/platform-express + express 5.3.0 | **express 已显式声明为直接依赖**（pnpm 严格布局下，直接 import 的包必须声明；与 platform-express 共享同一物理实例） |
+| 语言 | TypeScript 5.9.3, CommonJS, ES2021 | **strict: true 已全量开启**（规划中的"渐进收紧"已一步到位） |
+| 数据层 | Prisma 6.19 + SQLite（dev.db） | 零外部依赖起步，生产可平滑切换 PostgreSQL/MySQL；User 模型的 roles 以 JSON 字符串存储，仓储层负责映射 |
+| 日志 | pino 10 自封装（infra/logger） | 替代规划的 nestjs-pino；Nest 内置 Logger 已桥接至 pino |
+| 测试 | vitest 5 + supertest | 替代规划的 jest；3 个底座单测 + 1 个 E2E 冒烟 |
+| 部署 | GitHub Actions → GitHub Pages | 文档站自动发布（详见第六节） |
 
 ---
 
-## 二、目标目录结构与模块划分
-
-划分原则：**`common/` 放横切底座（纯能力，零业务），`modules/` 放业务模块，`infra/` 放有状态的框架集成（auth/audit/logger/数据层）**。底座通过全局注册（APP_PIPE / APP_FILTER / APP_GUARD / APP_INTERCEPTOR）对业务零侵入。
+## 二、目录结构（实际）
 
 ```
 src/
-├── main.ts                          # bootstrap：全局前缀、全局管道/过滤器/拦截器、Swagger、优雅停机
-├── app.module.ts                    # 根模块：ConfigModule(global) + 底座模块 + 业务模块聚合
+├── main.ts                          # bootstrap：pino 初始化 → pino 桥接 Nest Logger → requestId 中间件
+│                                    #   → HTTP 加固 → 全局前缀/版本化 → 优雅停机 → Swagger(/docs)
+├── app.module.ts                    # 根模块：全局注册（见下方守卫/拦截器链）
 │
-├── common/                          # ★ 通用底座（纯库，可被任何模块引用）
-│   ├── constants/
-│   │   └── metadata.constants.ts    #   metadata key：PUBLIC_KEY、ROLES_KEY、AUDIT_KEY、SKIP_TRANSFORM_KEY
-│   ├── decorators/
-│   │   ├── public.decorator.ts      #   @Public() —— 跳过鉴权白名单
-│   │   ├── roles.decorator.ts       #   @Roles('admin') —— 角色声明
-│   │   ├── current-user.decorator.ts#   @CurrentUser() —— 参数装饰器，取 req.user
-│   │   └── audit.decorator.ts       #   @Audit('user:create') —— 审计埋点
-│   ├── dto/
-│   │   ├── pagination.dto.ts        #   PaginationDto：page/pageSize/sort/keyword
-│   │   └── id-param.dto.ts          #   IdParamDto（UUID/数字校验）
-│   ├── exceptions/
-│   │   └── biz.exception.ts         #   BizException：业务异常（携带 code + message + data）
-│   ├── filters/
-│   │   └── all-exceptions.filter.ts #   全局异常过滤器 → 统一响应格式
-│   ├── guards/
-│   │   ├── jwt-auth.guard.ts        #   全局 JWT 守卫（@Public 豁免）
-│   │   └── roles.guard.ts           #   RBAC 角色守卫（@Roles 驱动）
-│   ├── interceptors/
-│   │   ├── transform.interceptor.ts #   统一响应包壳 ApiResponse<T>
-│   │   ├── logging.interceptor.ts   #   请求耗时统计
-│   │   └── audit.interceptor.ts     #   审计落库（异步）
-│   ├── responses/
-│   │   ├── api-response.ts          #   ApiResponse<T> 类型与 ok()/fail() 工具函数
-│   │   └── page.vo.ts               #   PageVo<T>：list/total/page/pageSize/totalPages
-│   ├── error-codes.ts               # ★ 错误码总表（分段常量，唯一事实来源）
-│   └── utils/
-│       └── query.util.ts            #   分页 DTO → { skip, take, order } 转换（与 ORM 解耦）
+├── common/                          # ★ 通用底座（纯能力，零业务依赖）
+│   ├── constants/metadata.constants.ts      # PUBLIC_KEY、ROLES_KEY、AUDIT_KEY、IDEMPOTENT_KEY
+│   ├── decorators/                          # @Public @Roles @CurrentUser @Audit @Idempotent
+│   ├── dto/                                 # PaginationDto、IdParamDto
+│   ├── exceptions/biz.exception.ts          # BizException（code + message + data）
+│   ├── filters/all-exceptions.filter.ts     # 全局异常 → 统一响应
+│   ├── guards/                              # jwt-auth.guard（全局默认鉴权）、roles.guard（RBAC）
+│   ├── interceptors/                        # logging（耗时）、transform（响应包壳）
+│   ├── responses/                           # ApiResponse<T>、PageVo<T>
+│   ├── utils/query.util.ts                  # PaginationDto → { skip, take, order }（ORM 中立）
+│   └── error-codes.ts                       # ★ 错误码总表（唯一事实来源）
 │
 ├── config/                          # 配置层
-│   ├── configuration.ts             #   env → 强类型配置对象
-│   └── env.validation.ts            #   启动时 env schema 校验（缺项 fail-fast）
+│   ├── configuration.ts             # env → 强类型配置（app/auth/cors/throttler…）
+│   ├── env.validation.ts            # 启动期校验（零依赖显式校验，fail-fast；可平滑替换 joi/zod）
+│   ├── api-base.ts                  # 全局前缀 + URI 版本化（main.ts 与导出脚本共用）
+│   ├── http-hardening.ts            # helmet / body 256kb / CORS 环境驱动
+│   └── openapi.ts                   # OpenAPI 文档唯一构建点（servers 在此声明）
 │
 ├── infra/                           # 框架集成层（有状态、可替换）
-│   ├── logger/
-│   │   └── logger.module.ts         #   nestjs-pino：结构化日志 + requestId（ALS）注入
-│   ├── auth/
-│   │   ├── auth.module.ts
-│   │   ├── auth.controller.ts       #   POST /auth/login、POST /auth/refresh
-│   │   ├── auth.service.ts          #   签发/校验 JWT
-│   │   ├── jwt.strategy.ts          #   passport-jwt 策略
-│   │   └── rbac.service.ts          #   角色→权限解析（简单场景可内联在 Guard）
-│   ├── audit/
-│   │   ├── audit.module.ts
-│   │   └── audit.service.ts         #   审计写入（表/文件），敏感字段脱敏
-│   └── database/                    #   P1 阶段数据层（Prisma/TypeORM 二选一）
+│   ├── logger/                      # pino 封装：requestContext ALS 中间件 + AppLoggerService 桥接
+│   ├── auth/                        # 登录/刷新（双凭证模型）、passport-jwt 策略
+│   ├── audit/                       # @Audit 埋点 → 异步写入（内存环形 + pino），查询接口 /api/v1/audit
+│   ├── idempotency/                 # @Idempotent 幂等拦截器（cache-manager Keyv 存储）
+│   └── database/                    # PrismaService / PrismaModule
 │
-├── modules/                         # ★ 业务模块（每个模块自包含 controller/dto/service）
-│   ├── hello/                       #   现有 hello 能力迁移至此
-│   │   ├── hello.controller.ts
-│   │   ├── hello.service.ts
-│   │   ├── hello.dto.ts
-│   │   └── index.ts                 #   保留 barrel export 惯例
-│   └── user/                        #   示例：完整 CRUD + 分页 + RBAC 的参考实现
-│       ├── user.controller.ts
-│       ├── user.service.ts
-│       ├── user.dto.ts
-│       └── index.ts
+├── modules/                         # ★ 业务模块
+│   ├── hello/                       # v1（参数校验/纯文本）+ v2（结构化返回）并行版本演示
+│   └── user/                        # 参考 CRUD：分页 + RBAC + 幂等 + 审计 + 事件（user.events）
 │
-└── health/
-    └── health.controller.ts         #   GET /health（liveness，@Public）
+└── health/                          # GET /api/v1/health（@Public 存活探针）
 ```
 
-模块依赖方向：`modules → common / infra`，`common 不依赖任何业务模块`，禁止反向引用。
+**全局注册链（app.module）**：
+
+- APP_PIPE：ValidationPipe（校验失败 → BizException 10001 + 字段明细）
+- APP_GUARD：ThrottlerGuard（限流，429 → 50003）→ JwtAuthGuard（@Public 豁免）→ RolesGuard（@Roles 驱动）
+- APP_FILTER：AllExceptionsFilter（统一兜底）
+- APP_INTERCEPTOR：Logging → Audit → Idempotency → Transform（最后包壳）
 
 ---
 
-## 三、六大底座能力设计
+## 三、底座能力契约（已落地）
 
-### 3.1 统一接口响应格式与错误码体系
+### 3.1 统一响应格式
 
-**成功/失败统一包壳**（由 TransformInterceptor + AllExceptionsFilter 保证，业务代码只返回 data）：
+成功/失败由 TransformInterceptor + AllExceptionsFilter 保证，业务代码只返回裸数据：
 
 ```jsonc
 // 成功（HTTP 200）
-{
-  "code": 0,                       // 0 = 成功
-  "message": "ok",
-  "data": { },                     // 业务数据；分页接口此处为 PageVo
-  "requestId": "f47ac10b-58cc-...",// 链路 ID，与日志、审计贯通
-  "timestamp": 1799000000000
-}
+{ "code": 0, "message": "ok", "data": {}, "requestId": "f47ac10b-...", "timestamp": 1799000000000 }
 
-// 失败（HTTP 4xx/5xx，code 承载业务细分）
-{
-  "code": 20001,
-  "message": "未登录或凭证已失效",
-  "data": null,                    // 校验失败时 data 携带字段级错误明细
-  "requestId": "f47ac10b-58cc-...",
-  "timestamp": 1799000000000
-}
+// 失败（HTTP 4xx/5xx，body.code 承载业务细分；校验失败时 data 携带字段级明细）
+{ "code": 20001, "message": "未登录或凭证无效", "data": null, "requestId": "f47ac10b-...", "timestamp": 1799000000000 }
 ```
 
-**分页响应 PageVo<T>**：
+分页响应 `PageVo<T>`：`{ list, total, page, pageSize, totalPages }`。
 
-```jsonc
-{
-  "list": [], "total": 100, "page": 1, "pageSize": 20, "totalPages": 5
-}
-```
+### 3.2 错误码体系（error-codes.ts 实际登记）
 
-**错误码分段规划**（`common/error-codes.ts` 集中定义，双轨制：HTTP 状态码表达传输层语义，body.code 表达业务细分）：
+双轨制：HTTP 状态码表达传输层语义，`body.code` 表达业务细分；未登记的脏 code 兜底按 50001 处理。
 
-| 段位 | 含义 | 示例 |
-|------|------|------|
-| 0 | 成功 | — |
-| 10xxx | 参数/校验错误 | 10001 参数校验失败、10002 参数类型错误 |
-| 20xxx | 认证与权限 | 20001 未认证、20002 凭证过期、20003 无权限、20004 账号被禁用 |
-| 30xxx | 业务规则错误（按模块再分段） | 310xx 用户模块、320xx 订单模块 |
-| 40xxx | 资源状态 | 40001 资源不存在、40002 状态冲突 |
-| 50xxx | 系统与依赖 | 50001 内部错误、50002 依赖服务不可用、50003 限流 |
+| code | HTTP | message |
+|------|------|---------|
+| 0 | 200 | ok |
+| 10001 | 400 | 参数校验失败 |
+| 10002 | 400 | 请求参数错误 |
+| 20001 | 401 | 未登录或凭证无效 |
+| 20002 | 401 | 凭证已过期 |
+| 20003 | 403 | 无访问权限 |
+| 20004 | 403 | 账号已被禁用 |
+| 30000 | 422 | 业务处理失败 |
+| 40001 | 404 | 资源不存在 |
+| 40002 | 409 | 资源状态冲突 |
+| 50001 | 500 | 服务器内部错误 |
+| 50002 | 502 | 依赖服务不可用 |
+| 50003 | 429 | 请求过于频繁 |
 
-设计原则：错误码全局唯一、一处定义（error-codes.ts）、message 与 code 一同声明、预留 i18n 扩展位。
+约定：新增错误码必须先在 error-codes.ts 登记，业务代码通过 `BizException(code, message?)` 抛出，禁止模块内私造错误码。
 
-### 3.2 参数校验与异常处理
+### 3.3 参数校验与异常分层
 
-- **依赖**：`class-validator` + `class-transformer`（Nest 官方主流组合）。
-- **全局管道**：`ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true })`，经 APP_PIPE 注册。DTO 用装饰器声明规则，控制器零校验代码。
-- **校验失败处理**：管道异常被 AllExceptionsFilter 捕获，映射为 `10001 + 字段级错误明细`。
-- **异常分层**：
+- ValidationPipe 全局注册（whitelist + forbidNonWhitelisted + transform），DTO 装饰器声明规则，控制器零校验代码。
+- 异常分层：BizException（业务主动抛出）→ 指定 code；ValidationPipe → 10001 + 明细；HttpException → 映射 40xxx/50xxx；未知异常 → 50001（完整堆栈仅入日志，对外隐藏）。
 
-| 异常类型 | 来源 | 输出 |
-|----------|------|------|
-| BizException | 业务代码主动抛出 | 指定 code/message |
-| HttpException | Nest 内置（NotFound 等 404） | 映射到 40xxx/50xxx 段 |
-| ValidationError | ValidationPipe | 10001 + 明细 |
-| Unknown Error | 兜底 | 50001，记录完整堆栈，对外隐藏内部细节 |
+### 3.4 鉴权与 RBAC
 
-- **AllExceptionsFilter** 统一出口：组装响应体、注入 requestId、按级别写日志（4xx warn / 5xx error+stack）。
+- **双凭证模型**（超出原规划的单轨 JWT）：登录签发 access（默认 2h）+ refresh（默认 7d）凭证对，payload 携带 `typ` 标记防混用；`POST /auth/refresh` 用 refreshToken 换新对（自包含校验，无服务端会话）。
+- 密码哈希：bcryptjs。策略：passport-jwt。
+- 全局 JwtAuthGuard 默认拒绝，`@Public()` 白名单（/auth/login、/auth/refresh、/api/v1/health、/api/v2/hello、/docs）。
+- RBAC 阶段一：`@Roles('admin')` + RolesGuard（user 模块写操作均限 admin）。
 
-### 3.3 鉴权与权限控制
+### 3.5 日志与审计
 
-- **认证**：AuthModule 提供 `POST /auth/login`（argon2/bcrypt 验密 → 签发 JWT）；passport-jwt 策略解析 Bearer Token。
-- **全局守卫**：`JwtAuthGuard` 经 APP_GUARD 全局注册，默认全站需登录；`@Public()` 装饰器声明白名单（/auth/login、/health、Swagger）。
-- **权限（RBAC 两级演进）**：
-  - 阶段一：`@Roles('admin','ops')` + RolesGuard，角色硬编码在装饰器，满足简单场景；
-  - 阶段二：user/role/permission 三表落库，rbac.service 解析权限点，Guard 按 `模块:动作` 粒度校验。
-- **配置安全**：JWT_SECRET/过期时间全部走 env 校验；预留 refresh token 与多端登录策略扩展点。
+- 日志：pino 结构化输出；requestContext 中间件经 AsyncLocalStorage 注入 requestId，与响应体、审计贯通；Nest 内置 Logger 桥接 pino。
+- 审计：`@Audit('user:create', { includeBody: true })` → AuditInterceptor 异步落盘（微任务让出，不阻塞响应）；记录 who/when/what/入参摘要/结果/耗时/租户（X-Tenant-Id）；password/token/secret 等键名强制脱敏；提供 `GET /api/v1/audit` 查询。
+- 当前审计为**内存环形暂存（500 条）+ pino 输出**，持久化接口契约已定型，待替换为表/消息队列实现。
 
-### 3.4 日志与审计
+### 3.6 幂等与缓存（规划 P3，已提前落地）
 
-- **日志**：`nestjs-pino`（结构化 JSON、低开销），替换默认 Logger；`LOG_LEVEL` 环境变量控制。
-- **requestId 贯通**：入口中间件生成/透传 `x-request-id`，经 AsyncLocalStorage 注入所有日志行与响应体，实现一次请求全链路可查。
-- **访问日志**：LoggingInterceptor 记录 method/url/status/耗时/userId。
-- **审计**：`@Audit('user:create')` 标注敏感写操作 → AuditInterceptor 异步落库（不阻塞响应）；记录 who/when/what/入参摘要/result；password/token 等字段强制脱敏。
+- `@Idempotent()` 声明端点生效（user:create 已启用）：请求头 `idempotency-key`；首次成功结果缓存 24h，同键重放返回缓存并标注 `x-idempotent-replayed`；同键在途并发合并等待，保证只执行一次；失败不入缓存可重试。
+- 存储为进程内 Keyv（@nestjs/cache-manager），跨实例场景接入 Redis 后语义不变。
 
-### 3.5 通用分页与查询
+### 3.7 分页与查询
 
-- **PaginationDto**：page（默认 1，≥1）、pageSize（默认 20，上限 100）、sort（`field:asc|desc` 格式，字段白名单校验防注入）、keyword。
-- **query.util.ts**：`toQueryOptions(dto)` 输出 `{ skip, take, order }` 中立结构，不绑定具体 ORM，未来切数据层不改业务代码。
-- 分页字段级校验与全站校验共用 3.2 的管道体系。
+PaginationDto（page/pageSize/sort 字段白名单防注入/keyword）→ query.util 输出 ORM 中立的 `{ skip, take, order }`。
 
-### 3.6 配置管理（支撑项）
+### 3.8 限流与 HTTP 加固
 
-- `@nestjs/config` + `env.validation.ts`（Joi/zod schema），启动即校验必填项，缺失 fail-fast。
-- 端口、前缀、JWT、日志级别、数据库连接全部环境变量化，main.ts 消除硬编码。
+- ThrottlerGuard 全局限流（超限 429 → 50003），响应头携带 X-RateLimit-*。
+- helmet 安全响应头（生产开启 CSP）；body 解析显式接管并限 256kb（超限 → 413 → 10002）。
+- CORS 环境驱动：`CORS_ORIGINS` 白名单；开发全放行，**生产未配置则拒绝所有跨域**。
+
+### 3.9 API 形态与版本化
+
+- 全局前缀 `api` + URI 版本化（默认 v1）→ `/api/v1/*`；`/api/v2/hello` 演示并行版本（结构化返回，@Public）。
+- 端点清单（12 个路径）：/health、/auth/*（login/refresh/profile）、/users（CRUD+me+分页）、/hello（v1 三端点）、/v2/hello、/audit。
 
 ---
 
-## 四、与现有代码的衔接方式
+## 四、规划 → 实施对照
 
-| 现有资产 | 衔接策略 | 改动量 |
-|----------|----------|--------|
-| `main.ts` | 渐进追加：`setGlobalPrefix('api/v1')`、注册全局 Pipe/Filter/Interceptor、`enableShutdownHooks()`、Swagger 初始化。现有两行创建/监听逻辑不变，端口改由 ConfigService 读取 | 追加式修改 |
-| `app/app.module.ts` | imports 追加 ConfigModule/LoggerModule/AuthModule；providers 追加 APP_PIPE/APP_FILTER/APP_GUARD×2/APP_INTERCEPTOR×3 全局注册 | 追加式修改 |
-| `app/controller/`、`app/services/` | **整体迁移**至 `modules/hello/`（controller/service 单数命名对齐 Nest 惯例），保留 index.ts barrel 惯例；`app/` 目录随后收敛为根模块所在 | 目录迁移 |
-| HelloController 返回裸 string | **业务代码不改**：service 继续返回数据，由全局 TransformInterceptor 统一包壳。若 `/` 与 `/hello/world` 已被外部调用方依赖，可在根路径临时保留一个兼容 Controller，新接口一律挂 `/api/v1` | 零改动/低改动 |
-| HelloService | 原样迁移；P1 阶段作为参数校验+分页的演示改造对象（接收 HelloQueryDto） | 零改动起步 |
-| `package.json` scripts | 保留现有四条脚本；新增 `test`（P2 阶段） | 追加 |
-| `tsconfig.json` | P0 不动（避免 preview 环境噪音）；P2 随 ESLint 一起渐进开启 strictNullChecks/noImplicitAny，先对新目录生效 | 延后 |
-
-**兼容性红线**：底座全部通过 Nest 标准扩展点（全局 Provider + 装饰器元数据）接入，不修改 Nest 源行为；任何业务模块移除后底座仍可独立运行。
-
----
-
-## 五、分阶段实施计划与优先级
-
-### P0 —— 底座最小闭环（优先级最高，建议先做）
-
-| # | 任务 | 产出物 |
-|---|------|--------|
-| 1 | 引入 @nestjs/config + env 校验 | config/ 目录，端口/环境配置化 |
-| 2 | 错误码总表 + BizException | common/error-codes.ts、common/exceptions/ |
-| 3 | 统一响应类型 + TransformInterceptor | common/responses/、common/interceptors/ |
-| 4 | AllExceptionsFilter | common/filters/ |
-| 5 | class-validator 全局管道 | 安装依赖，HelloQueryDto 校验示例 |
-| 6 | nestjs-pino + requestId | infra/logger/ |
-| 7 | main.ts 改造 + /health | 全局前缀、优雅停机、健康检查 |
-| 8 | 目录重构迁移 | common/、infra/、modules/hello/ 就位 |
-
-验收标准：任意接口返回统一格式；校验失败返回 10001+明细；日志含 requestId；404/未知异常有兜底格式。
-
-### P1 —— 鉴权与数据层（第二优先级）
-
-1. AuthModule：登录签发 JWT、passport-jwt 策略、JwtAuthGuard 全局 + @Public 白名单；
-2. RolesGuard + @Roles（RBAC 阶段一）；
-3. 数据层选型落地（建议 Prisma：类型安全与迁移体验好；重定制 SQL 场景选 TypeORM）+ PaginationDto + query.util 接入；
-4. Swagger（@nestjs/swagger）全量文档化，标记鉴权注解。
-
-验收标准：未登录访问返回 20001；user 模块 CRUD+分页为业务模块参考实现；Swagger 可在线调试。
-
-### P2 —— 治理增强（第三优先级）
-
-1. 审计模块（@Audit 装饰器 + 异步落库 + 脱敏）；
-2. 测试体系（jest + supertest）：底座单测（错误码映射、分页转换）+ E2E 冒烟；
-3. 安全加固：@nestjs/throttler 限流、helmet、CORS 白名单收敛、body 大小限制；
-4. tsconfig strict 渐进开启 + ESLint 规则（对 common/infra 先行强制）。
-
-### P3 —— 按需演进（第四优先级）
-
-接口版本化策略深化、幂等键、多租户、缓存层（@nestjs/cache-manager + Redis）、消息队列、OpenAPI 规范导出与前端代码生成。
-
-### 优先级判断依据
-
-- **P0 先行**：响应格式与错误码是所有模块的契约基础，越晚定越难改，且不依赖任何外部设施，当天可闭环；
-- **鉴权（P1）居次**：接口一旦对外暴露即需鉴权，但依赖 P0 的错误码与响应格式；
-- **审计/测试（P2）靠后**：依赖鉴权产生的用户上下文才有审计主体；测试在底座 API 稳定后投入收益最高；
-- 数据层放 P1 而非 P0：分页工具可用内存数据先验证契约，避免底座被 ORM 选型阻塞。
+| 阶段 | 规划任务 | 状态 | 落地说明 |
+|------|----------|------|----------|
+| P0 | @nestjs/config + env 校验 | ✅ | 零依赖显式校验（比规划的 joi/zod 更轻），fail-fast |
+| P0 | 错误码总表 + BizException | ✅ | 13 个错误码已登记，含兜底解析 |
+| P0 | 统一响应 + TransformInterceptor | ✅ | 与 PageVo 配套 |
+| P0 | AllExceptionsFilter | ✅ | 4xx warn / 5xx error+stack 分级日志 |
+| P0 | class-validator 全局管道 | ✅ | HelloQueryDto / PaginationDto / IdParamDto |
+| P0 | pino 日志 + requestId | ✅ | 自封装 pino + ALS 中间件（见第五节选型差异） |
+| P0 | main.ts 改造 + /health | ✅ | 优雅停机、健康探针 @Public |
+| P0 | 目录重构迁移 | ✅ | common/config/infra/modules/health 就位 |
+| P1 | AuthModule（JWT + @Public 白名单） | ✅ | 升级为 access + refresh 双凭证模型 |
+| P1 | RolesGuard + @Roles | ✅ | 阶段一（角色硬编码） |
+| P1 | 数据层 + 分页接入 | ✅ | Prisma + SQLite；user 模块为参考实现 |
+| P1 | Swagger 全量文档化 | ✅ | /docs + /docs-json + 装饰器注解 |
+| P2 | 审计模块 | ✅ | 含租户字段与脱敏；持久化待替换（见第七节） |
+| P2 | 测试体系 | ✅ | vitest + supertest（选型差异见第五节） |
+| P2 | 安全加固（throttler/helmet/CORS/body 限制） | ✅ | http-hardening.ts 统一接管 |
+| P2 | tsconfig strict + ESLint | ⚠️ 部分 | strict: true 已全量开启；ESLint 未引入 |
+| P3 | 幂等键 | ✅ 提前 | @Idempotent + 在途合并（超出规划深度） |
+| P3 | 缓存层 | ✅ 部分 | cache-manager 内存态；Redis 接入待做 |
+| P3 | OpenAPI 规范导出 | ✅ 提前 | 导出脚本 + GitHub Pages 文档站 |
+| P3 | 接口版本化深化 | ✅ | URI 版本化 v1/v2 并行演示 |
+| P3 | 消息队列、多租户深化 | ⬜ | 未启动 |
 
 ---
 
-## 六、新增依赖清单（建议版本以 npm 实际兼容 NestJS 12 为准）
+## 五、与初始规划的技术选型差异
 
-| 类别 | 包 |
-|------|-----|
-| P0 | @nestjs/config、class-validator、class-transformer、nestjs-pino、pino、pino-pretty（dev） |
-| P1 | @nestjs/jwt、passport、passport-jwt、@nestjs/swagger、argon2、@nestjs/prisma 或 @nestjs/typeorm（选型后定） |
-| P2 | @nestjs/throttler、helmet、jest、ts-jest、@nestjs/testing、supertest、@types/passport-jwt |
-| 可选 | joi 或 zod（env 校验）、eslint + typescript-eslint |
+| 项 | 规划 | 实际 | 原因 |
+|----|------|------|------|
+| 日志 | nestjs-pino | **自封装 pino**（infra/logger） | 需要与 Nest 内置 Logger 桥接、ALS 注入更可控，避免额外封装层 |
+| 测试 | jest + ts-jest | **vitest + @swc/core** | 转译更快、配置更简；unplugin-swc 接入 |
+| 密码哈希 | argon2 | **bcryptjs** | 纯 JS 无原生编译依赖，Windows/CI 环境零摩擦 |
+| JWT | passport-jwt 单轨 | **@nestjs/jwt + passport-jwt 双凭证** | access/refresh 分离为生产必需，规划阶段考虑不足 |
+| 幂等 | P3 待规划 | 已实现 | 底座契约类能力宜早不宜迟 |
+| strict 模式 | 渐进收紧 | 一步到位 | 新项目无存量包袱 |
+| env 校验 | joi 或 zod | 显式 TS 校验函数 | 规则少时零依赖；ConfigModule validate 挂载点保持可替换 |
 
-## 七、风险与注意事项
+---
 
-1. **NestJS 12 为 preview 版本**：@nestjs/swagger、@nestjs/jwt、nestjs-pino 等集成包需验证 peer 兼容；安装后先跑通 P0 冒烟再扩展。
-2. **全局注册顺序**：Interceptor 执行顺序为注册的逆序，需保证 TransformInterceptor 最后包壳、LoggingInterceptor 最先计时；Guard 顺序 JwtAuthGuard → RolesGuard。
-3. **@Public 白名单收敛**：全局守卫默认拒绝，白名单需评审，防止 Swagger/health 之外的接口漏配鉴权。
-4. **严格模式迁移**：strictNullChecks 开启预计暴露存量代码类型问题，按目录分批（common → infra → modules）推进。
-5. **审计性能**：审计写入必须异步（队列或微任务），避免拖慢接口 P99。
+## 六、文档与发布基础设施
+
+### 6.1 API 文档三通道
+
+1. **应用内 Swagger UI**：`http://localhost:3000/docs`（persistAuthorization）；`/docs-json` 输出原始 OpenAPI。
+2. **openapi.json 导出**：`pnpm run openapi:export`（scripts/export-openapi.ts，与 main.ts 共用 api-base/openapi 配置点，防止漂移）。
+3. **GitHub Pages 文档站**：`.github/workflows/deploy-docs.yml` 在 push 到 main 时自动部署 `docs/api-docs.html`（首页）+ `openapi.json` → `https://humuchen.github.io/api-foundation/`；`actions/configure-pages` 已启用 `enablement: true`，首次运行自动创建 Pages 站点。
+
+### 6.2 OpenAPI servers 与在线调试
+
+- openapi.ts 声明两个 server：`http://localhost:3000`（本地开发）、`/`（同源部署）。
+- **Pages 为静态托管，不承载 API**：在线调试需在 Swagger UI 顶部 Servers 下拉选择 localhost，并本地 `pnpm run dev`；开发环境 CORS 全放行（已实测 Pages 域名跨域可达）。
+- 若 API 部署至真实主机：在 openapi.ts 增补 server 地址，并在生产配置 `CORS_ORIGINS` 包含 Pages 域名。
+
+### 6.3 依赖声明约定
+
+pnpm 严格布局下：**源码直接 import 的包必须声明为直接依赖**（如 express），不得依赖提升的传递依赖（幽灵依赖）。
+
+---
+
+## 七、后续演进清单
+
+1. **审计持久化**：替换 AuditService 的 persist 为表写入/消息队列（接口契约已定型）。
+2. **幂等 Redis 化**：跨实例/重启语义升级（header 契约不变）。
+3. **RBAC 阶段二**：user/role/permission 落库，按 `模块:动作` 粒度校验。
+4. **登出与设备管理**：refresh token 黑名单、多端登录策略。
+5. **ESLint 引入**：typescript-eslint 接入，对 common/infra 强制规则。
+6. **生产就绪检查单**：强随机 JWT_SECRET（缺省 dev 密钥生产启动即失败）、CORS_ORIGINS 显式配置、数据库切换 PostgreSQL、日志聚合接入。
+7. **多租户深化**：X-Tenant-Id 已贯通审计，向数据隔离层演进。
