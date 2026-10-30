@@ -4,7 +4,7 @@ import { HttpStatus } from '@nestjs/common';
  * 业务错误码总表 —— 全站唯一事实来源。
  *
  * 分段规则：
- *   0        成功
+ *   1        成功
  *   10xxx    参数/校验错误
  *   20xxx    认证与权限
  *   30xxx    业务规则（按模块再分段：310xx 用户、320xx 订单…）
@@ -15,7 +15,7 @@ import { HttpStatus } from '@nestjs/common';
  * 业务代码通过 BizException(code, message?) 抛出，禁止在模块内私造错误码。
  */
 export const ErrorCode = {
-  OK: 0,
+  OK: 1,
 
   // 10xxx 参数/校验
   VALIDATION_FAILED: 10001,
@@ -49,7 +49,7 @@ export interface ErrorMeta {
   message: string;
 }
 
-export const ERROR_META: Record<Exclude<ErrorCodeValue, 0>, ErrorMeta> = {
+export const ERROR_META: Record<Exclude<ErrorCodeValue, typeof ErrorCode.OK>, ErrorMeta> = {
   [ErrorCode.VALIDATION_FAILED]: { httpStatus: HttpStatus.BAD_REQUEST, message: '参数校验失败' },
   [ErrorCode.PARAM_INVALID]: { httpStatus: HttpStatus.BAD_REQUEST, message: '请求参数错误' },
 

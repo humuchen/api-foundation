@@ -43,13 +43,13 @@ describe('接口底座 E2E', () => {
     const res = await request(app.getHttpServer())
       .post('/api/v1/auth/login')
       .send({ username, password });
-    expect(res.body.code).toBe(0);
+    expect(res.body.code).toBe(1);
     return res.body.data as LoginResult;
   };
 
   it('GET /health 公开端点：统一包壳 + requestId', async () => {
     const res = await request(app.getHttpServer()).get('/api/v1/health').expect(200);
-    expect(res.body.code).toBe(0);
+    expect(res.body.code).toBe(1);
     expect(res.body.data.status).toBe('up');
     expect(res.body.requestId).toBeTruthy();
     expect(typeof res.body.timestamp).toBe('number');
@@ -75,7 +75,7 @@ describe('接口底座 E2E', () => {
       .post('/api/v1/auth/refresh')
       .send({ refreshToken: adminRefreshToken })
       .expect(201);
-    expect(res.body.code).toBe(0);
+    expect(res.body.code).toBe(1);
     expect(res.body.data.accessToken).toBeTruthy();
     expect(res.body.data.refreshToken).toBeTruthy();
     expect(res.body.data.refreshExpiresIn).toBe('7d');
@@ -112,7 +112,7 @@ describe('接口底座 E2E', () => {
       .get('/api/v1/users?page=1&pageSize=2')
       .set('Authorization', `Bearer ${adminToken}`)
       .expect(200);
-    expect(res.body.code).toBe(0);
+    expect(res.body.code).toBe(1);
     expect(res.body.data.total).toBeGreaterThanOrEqual(3);
     expect(res.body.data.list).toHaveLength(2);
     expect(res.body.data.totalPages).toBeGreaterThanOrEqual(2);
@@ -194,7 +194,7 @@ describe('接口底座 E2E', () => {
     const res = await request(app.getHttpServer())
       .get('/api/v2/hello?name=E2E')
       .expect(200);
-    expect(res.body.code).toBe(0);
+    expect(res.body.code).toBe(1);
     expect(res.body.data.version).toBe('v2');
     expect(res.body.data.message).toBe('Hello, E2E! (v2)');
     expect(typeof res.body.data.generatedAt).toBe('string');

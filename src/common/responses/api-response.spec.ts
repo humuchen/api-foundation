@@ -3,9 +3,9 @@ import { ErrorCode } from '../error-codes';
 import { buildFailure, buildSuccess, isApiResponse } from './api-response';
 
 describe('api-response（统一响应构造）', () => {
-  it('buildSuccess → code=0 / ok / 透传 data 与 requestId', () => {
+  it('buildSuccess → code=1 / ok / 透传 data 与 requestId', () => {
     const r = buildSuccess({ a: 1 }, 'req-1');
-    expect(r.code).toBe(0);
+    expect(r.code).toBe(ErrorCode.OK);
     expect(r.message).toBe('ok');
     expect(r.data).toEqual({ a: 1 });
     expect(r.requestId).toBe('req-1');
@@ -27,7 +27,7 @@ describe('api-response（统一响应构造）', () => {
 
   it('isApiResponse：包壳形态识别（防双层包壳）', () => {
     expect(isApiResponse(buildSuccess(null, 'r'))).toBe(true);
-    expect(isApiResponse({ code: 0 })).toBe(false);
+    expect(isApiResponse({ code: 1 })).toBe(false);
     expect(isApiResponse(null)).toBe(false);
     expect(isApiResponse('str')).toBe(false);
   });
