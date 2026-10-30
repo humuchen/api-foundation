@@ -7,3 +7,4 @@ dist/
 .env
 .workbuddy/
 .wbapp_*.genie
+.vscode
