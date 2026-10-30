@@ -1,0 +1,505 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/v1/audit": {
+      "get": {
+        "operationId": "AuditController_list_v1",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "description": "返回最近 N 条",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "最近审计记录（admin；新→旧）",
+        "tags": [
+          "audit"
+        ]
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "operationId": "AuthController_login_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "登录签发 JWT（公开端点；内置账号 admin/admin123、ops/ops123456、demo/demo123456）",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "operationId": "AuthController_refresh_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshTokenDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "刷新凭证（公开端点；用 refreshToken 换取新的 access/refresh 对）",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/profile": {
+      "get": {
+        "operationId": "AuthController_profile_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "当前登录用户信息（演示 @CurrentUser）",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/users/me": {
+      "get": {
+        "operationId": "UserController_me_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "我的信息（任意登录用户）",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/api/v1/users": {
+      "get": {
+        "operationId": "UserController_page_v1",
+        "parameters": [
+          {
+            "name": "page",
+            "required": true,
+            "in": "query",
+            "description": "页码（从 1 开始）",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": true,
+            "in": "query",
+            "description": "每页条数（上限 100）",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "排序，格式 field:asc|desc，如 createdAt:desc；可排序字段见各模块白名单",
+            "schema": {
+              "example": "createdAt:desc",
+              "type": "string"
+            }
+          },
+          {
+            "name": "keyword",
+            "required": false,
+            "in": "query",
+            "description": "模糊匹配 username / nickname",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "role",
+            "required": false,
+            "in": "query",
+            "description": "按角色过滤",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "admin",
+                "ops",
+                "user"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "分页查询用户（admin）—— 统一分页契约 + 结果缓存示例",
+        "tags": [
+          "users"
+        ]
+      },
+      "post": {
+        "operationId": "UserController_create_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "创建用户（admin；支持 Idempotency-Key 幂等重放）",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/api/v1/users/{id}": {
+      "get": {
+        "operationId": "UserController_detail_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "资源 ID",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "用户详情（admin）",
+        "tags": [
+          "users"
+        ]
+      },
+      "patch": {
+        "operationId": "UserController_update_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "资源 ID",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "更新用户（admin）",
+        "tags": [
+          "users"
+        ]
+      },
+      "delete": {
+        "operationId": "UserController_remove_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "资源 ID",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "删除用户（admin）",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/api/v1/hello": {
+      "get": {
+        "operationId": "HelloController_sayHello_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Hello"
+        ]
+      }
+    },
+    "/api/v1/hello/world": {
+      "get": {
+        "operationId": "HelloController_getHelloWorld_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Hello"
+        ]
+      }
+    },
+    "/api/v1/hello/error": {
+      "get": {
+        "operationId": "HelloController_throwError_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Hello"
+        ]
+      }
+    },
+    "/api/v2/hello": {
+      "get": {
+        "operationId": "HelloV2Controller_sayHello_v2",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "v2 示例：结构化返回（与 v1 的纯文本不同，展示版本间响应形态演进）",
+        "tags": [
+          "hello"
+        ]
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "operationId": "HealthController_check_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Health"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "NestJS v12 通用接口底座",
+    "description": "统一响应/错误码/参数校验/JWT 鉴权/RBAC/分页/审计/限流/幂等/缓存契约演示。全站默认需登录（@Public 白名单除外）：先调 POST /auth/login 获取凭证对，点右上角 Authorize 填入 accessToken。内置账号：admin/admin123（admin）、ops/ops123456（ops）、demo/demo123456（user）。URI 版本化：/api/v1/* 稳定契约，/api/v2/* 演示并行版本。",
+    "version": "0.4.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "LoginDto": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "example": "admin",
+            "description": "用户名"
+          },
+          "password": {
+            "type": "string",
+            "example": "admin123",
+            "minLength": 6,
+            "description": "密码"
+          }
+        },
+        "required": [
+          "username",
+          "password"
+        ]
+      },
+      "RefreshTokenDto": {
+        "type": "object",
+        "properties": {
+          "refreshToken": {
+            "type": "string",
+            "description": "登录时签发的 refreshToken"
+          }
+        },
+        "required": [
+          "refreshToken"
+        ]
+      },
+      "CreateUserDto": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "example": "newuser",
+            "description": "3-32 位字母/数字/下划线"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 6,
+            "description": "密码（6-64 位）"
+          },
+          "nickname": {
+            "type": "string",
+            "description": "昵称，缺省取 username"
+          },
+          "roles": {
+            "type": "string",
+            "enum": [
+              "admin",
+              "ops",
+              "user"
+            ],
+            "example": [
+              "user"
+            ]
+          }
+        },
+        "required": [
+          "username",
+          "password",
+          "roles"
+        ]
+      },
+      "UpdateUserDto": {
+        "type": "object",
+        "properties": {
+          "nickname": {
+            "type": "string"
+          },
+          "roles": {
+            "type": "string",
+            "enum": [
+              "admin",
+              "ops",
+              "user"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

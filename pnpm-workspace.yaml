@@ -1,0 +1,13 @@
+# pnpm 配置（pnpm 12 起，项目级 pnpm 设置统一放在本文件）
+# allowBuilds：允许执行构建脚本（postinstall 等）的依赖
+#   - @swc/core        SWC 原生绑定（Vitest 转译）
+#   - esbuild          原生二进制（Vitest 依赖）
+#   - prisma 系列      引擎下载与客户端生成
+allowBuilds:
+  '@prisma/client': true
+  '@prisma/engines': true
+  '@swc/core': true
+  esbuild: true
+  prisma: true
+  # 知情拒绝：遥测包，不允许执行任何脚本
+  '@scarf/scarf': false
