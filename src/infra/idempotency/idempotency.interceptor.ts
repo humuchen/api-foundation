@@ -73,7 +73,7 @@ export class IdempotencyInterceptor implements NestInterceptor {
 
     // 3) 首次执行：登记在途 → 成功落缓存 → 撤销在途
     const execution = firstValueFrom(next.handle(), { defaultValue: undefined })
-      .then(async (value) => {
+      .then(async (value: unknown) => {
         await this.cache.set(key, value, TTL_MS);
         return value;
       })

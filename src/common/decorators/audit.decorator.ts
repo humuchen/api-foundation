@@ -1,4 +1,4 @@
-import { SetMetadata } from '@nestjs/common';
+import { SetMetadata, type CustomDecorator } from '@nestjs/common';
 import { AUDIT_KEY } from '../constants/metadata.constants';
 
 export interface AuditMeta {
@@ -12,5 +12,8 @@ export interface AuditMeta {
  * 审计埋点：标注需要审计的写操作端点，由全局 AuditInterceptor 异步记录。
  * 用法：@Audit('user:create', { includeBody: true })
  */
-export const Audit = (action: string, options?: { includeBody?: boolean }) =>
+export const Audit = (
+  action: string,
+  options?: { includeBody?: boolean },
+): CustomDecorator<string> =>
   SetMetadata(AUDIT_KEY, { action, includeBody: options?.includeBody ?? false } satisfies AuditMeta);
