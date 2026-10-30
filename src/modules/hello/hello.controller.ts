@@ -8,7 +8,6 @@ import { ApiBearerAuth } from '@nestjs/swagger';
 /** 旧路由 GET / 、GET /hello/world 迁移为 /api/v1/hello 、/api/v1/hello/world */
 @Controller('hello')
 @ApiBearerAuth()
-@ApiBearerAuth()
 export class HelloController {
   constructor(private readonly helloService: HelloService) {}
 
