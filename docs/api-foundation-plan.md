@@ -80,7 +80,7 @@ src/
 
 ```jsonc
 // 成功（HTTP 200）
-{ "code": 0, "message": "ok", "data": {}, "requestId": "f47ac10b-...", "timestamp": 1799000000000 }
+{ "code": 1, "message": "ok", "data": {}, "requestId": "f47ac10b-...", "timestamp": 1799000000000 }
 
 // 失败（HTTP 4xx/5xx，body.code 承载业务细分；校验失败时 data 携带字段级明细）
 { "code": 20001, "message": "未登录或凭证无效", "data": null, "requestId": "f47ac10b-...", "timestamp": 1799000000000 }
@@ -94,7 +94,7 @@ src/
 
 | code | HTTP | message |
 |------|------|---------|
-| 0 | 200 | ok |
+| 1 | 200 | ok |
 | 10001 | 400 | 参数校验失败 |
 | 10002 | 400 | 请求参数错误 |
 | 20001 | 401 | 未登录或凭证无效 |
