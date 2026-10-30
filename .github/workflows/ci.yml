@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+
+jobs:
+  build-test:
+    name: Build & Test (Node 22)
+    runs-on: ubuntu-latest
+    env:
+      # E2E 使用仓库内置的 prisma/dev.db（含种子数据）
+      DATABASE_URL: file:./dev.db
+      NODE_ENV: test
+      JWT_SECRET: ci-only-secret-not-for-production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # pnpm 布局下 postinstall 不保证完整生成 Prisma Client（本地已复现），
+      # 构建前显式生成
+      - name: Generate Prisma Client
+        run: pnpm exec prisma generate
+
+      - name: Build
+        run: pnpm build
+
+      - name: Test (unit + e2e)
+        run: pnpm test

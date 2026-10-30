@@ -1,6 +1,11 @@
 # api-foundation — NestJS v12 通用接口底座
 
+[![CI](https://github.com/humuchen/api-foundation/actions/workflows/ci.yml/badge.svg)](https://github.com/humuchen/api-foundation/actions/workflows/ci.yml)
+[![API Docs](https://img.shields.io/badge/API%20Docs-GitHub%20Pages-blue)](https://humuchen.github.io/api-foundation/)
+
 NestJS 12.3.0 + Express + TypeScript 5.9 的通用后端接口底座：统一响应/错误码、参数校验、JWT 鉴权 + RBAC、结构化日志（requestId 全链路）、分页契约、审计、限流、安全加固、Swagger 文档、自动化测试（Vitest）。
+
+推送 `main` 后自动：CI 构建测试（含 E2E）→ API 文档（Swagger UI + `openapi.json`）发布至 GitHub Pages：https://humuchen.github.io/api-foundation/
 
 ## 运行
 
