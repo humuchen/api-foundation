@@ -6,6 +6,7 @@ import { ErrorCode } from '../../common/error-codes';
 import { BizException } from '../../common/exceptions/biz.exception';
 import { buildPage, PageVo } from '../../common/responses/page.vo';
 import { toQueryOptions } from '../../common/utils/query.util';
+import { getRequestContext } from '../../infra/logger';
 import { UserChangedEvent } from './user.events';
 import { CreateUserDto, UpdateUserDto, UserQueryDto } from './user.dto';
 import { UserEntity, UserRepository } from './user.repository';
@@ -19,6 +20,8 @@ export interface UserVo {
   username: string;
   nickname: string;
   roles: string[];
+  /** 租户归属：null = 平台级账号 */
+  tenantId: string | null;
   disabled: boolean;
   createdAt: string;
   updatedAt: string;
@@ -33,9 +36,14 @@ const PAGE_CACHE_TTL_MS = 30_000;
 const PAGE_VERSION_KEY = 'users:page:ver';
 
 /**
- * 用户服务：user 模块为底座契约的参考实现（分页 + RBAC + 校验 + 统一响应 + 缓存 + 领域事件）。
+ * 用户服务：user 模块为底座契约的参考实现（分页 + RBAC + 校验 + 统一响应 + 缓存 + 领域事件 + 租户）。
  * 缓存策略：分页结果按查询指纹缓存 30s，失效采用「版本号递增」（Keyv 无前缀扫描，
  * 版本键轮转等价于批量失效）；写操作先失效缓存再发领域事件，保证本请求读到自己写。
+ * 租户隔离（行级，参考实现约定）：
+ *  - 列表：请求携带 X-Tenant-Id 时仅返回该租户用户（平台级账号 tenantId=null 不在列表中）；
+ *    缓存键包含租户段，杜绝跨租户串数据；无租户头 = 平台视角（全量可见）。
+ *  - 创建：注入当前租户（无租户头创建平台级账号）。
+ *  - 详情/自我查询/登录：不隔离（平台账号需跨租户按 id 定位）。
  * verifyCredentials 供 infra/auth（登录）调用 —— 用户数据归属业务域，鉴权层只消费公开 API。
  */
 @Injectable()
@@ -47,8 +55,9 @@ export class UserService {
   ) {}
 
   async findPage(query: UserQueryDto): Promise<PageVo<UserVo>> {
+    const tenantId = getRequestContext()?.tenantId;
     const ver = await this.pageVersion();
-    const key = `users:page:v${ver}:${query.page}:${query.pageSize}:${query.sort ?? ''}:${query.keyword ?? ''}:${query.role ?? ''}`;
+    const key = `users:page:v${ver}:${tenantId ?? 'platform'}:${query.page}:${query.pageSize}:${query.sort ?? ''}:${query.keyword ?? ''}:${query.role ?? ''}`;
     const cached = await this.cache.get<PageVo<UserVo>>(key);
     if (cached) return cached;
 
@@ -59,6 +68,7 @@ export class UserService {
       order: opts.order,
       keyword: query.keyword,
       role: query.role,
+      tenantId,
     });
     const page = buildPage(items.map(toVo), total, opts.page, opts.pageSize);
     await this.cache.set(key, page, PAGE_CACHE_TTL_MS);
@@ -85,6 +95,8 @@ export class UserService {
       passwordHash: await hash(dto.password, 10),
       nickname: dto.nickname?.trim() || dto.username,
       roles: dto.roles,
+      // 租户归属跟随请求上下文：携带 X-Tenant-Id 创建租户用户，否则为平台级
+      tenantId: getRequestContext()?.tenantId ?? null,
     });
     await this.invalidatePageCache();
     this.emitChanged('created', user, actorUsername);

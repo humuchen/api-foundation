@@ -15,9 +15,12 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
+    "db:generate:pg": "prisma generate --schema prisma/schema.postgres.prisma",
+    "db:migrate:pg": "prisma migrate dev --schema prisma/schema.postgres.prisma",
     "openapi:export": "ts-node scripts/export-openapi.ts"
   },
   "dependencies": {
+    "@keyv/redis": "^6.1.0",
     "@nestjs/cache-manager": "^12.0.2",
     "@nestjs/common": "12.3.0",
     "@nestjs/config": "^12.0.1",

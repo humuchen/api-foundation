@@ -117,7 +117,8 @@ src/
 
 ### 3.4 鉴权与 RBAC
 
-- **双凭证模型**（超出原规划的单轨 JWT）：登录签发 access（默认 2h）+ refresh（默认 7d）凭证对，payload 携带 `typ` 标记防混用；`POST /auth/refresh` 用 refreshToken 换新对（自包含校验，无服务端会话）。
+- **双凭证模型**（超出原规划的单轨 JWT）：登录签发 access（默认 2h）+ refresh（默认 7d）凭证对，payload 携带 `typ` 标记防混用；`POST /auth/refresh` 用 refreshToken 换新对。
+- **凭证治理（jti + 黑名单）**：每张凭证携带唯一 `jti`；refresh 轮换一次性——换取新对后旧 refresh jti 立即入黑名单（TTL 至自然过期），重放即 20001；`POST /auth/logout` 吊销当前 access 与可选 refreshToken；黑名单存于全局 Cache（memory/Redis 随 `CACHE_STORE` 外置），JwtStrategy 每次鉴权校验；策略层业务异常经 JwtAuthGuard 原样透出（保留细分 message）。
 - 密码哈希：bcryptjs。策略：passport-jwt。
 - 全局 JwtAuthGuard 默认拒绝，`@Public()` 白名单（/auth/login、/auth/refresh、/api/v1/health、/api/v2/hello、/docs）。
 - RBAC 阶段一：`@Roles('admin')` + RolesGuard（user 模块写操作均限 admin）。
@@ -126,12 +127,12 @@ src/
 
 - 日志：pino 结构化输出；requestContext 中间件经 AsyncLocalStorage 注入 requestId，与响应体、审计贯通；Nest 内置 Logger 桥接 pino。
 - 审计：`@Audit('user:create', { includeBody: true })` → AuditInterceptor 异步落盘（微任务让出，不阻塞响应）；记录 who/when/what/入参摘要/结果/耗时/租户（X-Tenant-Id）；password/token/secret 等键名强制脱敏；提供 `GET /api/v1/audit` 查询。
-- 当前审计为**内存环形暂存（500 条）+ pino 输出**，持久化接口契约已定型，待替换为表/消息队列实现。
+- 审计已**持久化至数据库**（Prisma `AuditLog` → `audit_logs` 表，createdAt 索引）；写入异步化（fire-and-forget），失败降级内存环形暂存（500 条）+ pino 告警；`GET /api/v1/audit` 优先读库、数据库异常时回退内存。
 
 ### 3.6 幂等与缓存
 
 - `@Idempotent()` 声明端点生效（user:create 已启用）：请求头 `idempotency-key`；首次成功结果缓存 24h，同键重放返回缓存并标注 `x-idempotent-replayed`；同键在途并发合并等待，保证只执行一次；失败不入缓存可重试。
-- 存储为进程内 Keyv（@nestjs/cache-manager），跨实例场景接入 Redis 后语义不变。
+- 存储随 `CACHE_STORE` 外置：`memory`（默认，进程内 Keyv，零依赖）| `redis`（`REDIS_URL` 必填，@keyv/redis，fail-fast 校验）。缓存、幂等、凭证黑名单共享同一 Cache 实例——多实例部署仅需外置此存储，header/语义契约不变。
 
 ### 3.7 分页与查询
 
@@ -146,7 +147,13 @@ PaginationDto（page/pageSize/sort 字段白名单防注入/keyword）→ query.
 ### 3.9 API 形态与版本化
 
 - 全局前缀 `api` + URI 版本化（默认 v1）→ `/api/v1/*`；`/api/v2/hello` 演示并行版本（结构化返回，@Public）。
-- 端点清单（12 个路径）：/health、/auth/\*（login/refresh/profile）、/users（CRUD+me+分页）、/hello（v1 三端点）、/v2/hello、/audit。
+- 端点清单：/health、/health/ready（readiness：SELECT 1 校验数据库，失败 50002）、/auth/\*（login/refresh/logout/profile）、/users（CRUD+me+分页）、/hello（v1 三端点）、/v2/hello、/audit。
+
+### 3.10 多租户（行级隔离参考实现）
+
+- 上下文：`X-Tenant-Id` 经 ALS 贯通日志与审计（白名单字符校验）。
+- 数据层（`User.tenantId`，索引就绪）：列表按租户过滤（租户视角仅见本租户用户，平台级 `tenantId=null` 账号隐藏）、创建注入当前租户；**分页缓存键包含租户段**，杜绝跨租户串数据。
+- 明确不隔离路径（平台管理需要）：详情/自我查询/登录/更新/删除；username 仍为全局唯一（跨租户唯一约束，深化时改为组合唯一）。
 
 ---
 
@@ -166,15 +173,18 @@ PaginationDto（page/pageSize/sort 字段白名单防注入/keyword）→ query.
 | P1   | RolesGuard + @Roles                         | ✅      | 阶段一（角色硬编码）                                                                              |
 | P1   | 数据层 + 分页接入                           | ✅      | Prisma + SQLite；user 模块为参考实现                                                              |
 | P1   | Swagger 全量文档化                          | ✅      | /docs + /docs-json + 装饰器注解                                                                   |
-| P2   | 审计模块                                    | ✅      | 含租户字段与脱敏；持久化待替换（见第七节）                                                        |
+| P2   | 审计模块                                    | ✅      | 含租户字段与脱敏；已持久化 audit_logs 表（降级内存缓冲）                                          |
 | P2   | 测试体系                                    | ✅      | vitest + supertest（选型差异见第五节）                                                            |
 | P2   | 安全加固（throttler/helmet/CORS/body 限制） | ✅      | http-hardening.ts 统一接管                                                                        |
 | P2   | tsconfig strict + ESLint                    | ✅      | strict: true 已全量开启；ESLint 10 平面配置 + 类型感知规则已接入（common/infra 强制层，详见 6.4） |
 | P3   | 幂等键                                      | ✅ 提前 | @Idempotent + 在途合并（超出规划深度）                                                            |
-| P3   | 缓存层                                      | ✅ 部分 | cache-manager 内存态；Redis 接入待做                                                              |
+| P3   | 缓存层                                      | ✅      | CACHE_STORE=redis 外置（缓存/幂等/黑名单共享），memory 默认零依赖                                 |
 | P3   | OpenAPI 规范导出                            | ✅ 提前 | 导出脚本 + GitHub Pages 文档站                                                                    |
 | P3   | 接口版本化深化                              | ✅      | URI 版本化 v1/v2 并行演示                                                                         |
-| P3   | 消息队列、多租户深化                        | ⬜      | 未启动                                                                                            |
+| P3   | 消息队列                                    | ⬜      | 未启动（进程内事件总线按契约可替换 BullMQ/RabbitMQ）                                              |
+| 演进 | 凭证治理（轮换/黑名单/登出）                | ✅      | jti + 一次性 refresh 轮换 + Cache 黑名单 + /auth/logout                                           |
+| 演进 | 多租户深化                                  | ✅ 参考 | 列表/创建行级隔离 + 缓存键隔离；详情与写路径隔离待深化                                            |
+| 演进 | 健康探针 readiness                          | ✅      | /health/ready（SELECT 1）；liveness /health 既有                                                 |
 
 ---
 
@@ -230,10 +240,12 @@ pnpm 严格布局下：**源码直接 import 的包必须声明为直接依赖**
 
 ## 七、后续演进清单
 
-1. **审计持久化**：替换 AuditService 的 persist 为表写入/消息队列（接口契约已定型）。
-2. **幂等 Redis 化**：跨实例/重启语义升级（header 契约不变）。
-3. **RBAC 阶段二**：user/role/permission 落库，按 `模块:动作` 粒度校验。
-4. **登出与设备管理**：refresh token 黑名单、多端登录策略。
-5. **Prettier 接入**：与 ESLint 通过 eslint-config-prettier 对齐（当前格式化靠编辑器约定）。
-6. **生产就绪检查单**：强随机 JWT_SECRET（缺省 dev 密钥生产启动即失败）、CORS_ORIGINS 显式配置、数据库切换 PostgreSQL、日志聚合接入。
-7. **多租户深化**：X-Tenant-Id 已贯通审计，向数据隔离层演进。
+已落地（2026-11-02）：~~审计持久化~~（audit_logs 表）、~~幂等 Redis 化~~（CACHE_STORE 外置）、~~登出与凭证黑名单~~（jti 轮换 + /auth/logout）、~~多租户首期~~（列表/创建行级隔离）、~~readiness 探针~~（/health/ready）。
+
+剩余演进：
+
+1. **RBAC 阶段二**：user/role/permission 落库，按 `模块:动作` 粒度校验。
+2. **消息队列**：`user.changed` 等域事件按契约替换为 BullMQ/RabbitMQ（跨进程/持久化/重试）。
+3. **多租户深化**：详情/更新/删除路径租户校验；username 改为「租户内唯一」组合约束。
+4. **Prettier 接入**：与 ESLint 通过 eslint-config-prettier 对齐（当前格式化靠编辑器约定）。
+5. **生产就绪检查单**：强随机 JWT_SECRET（缺省 dev 密钥生产启动即失败）、CORS_ORIGINS 显式配置、数据库切换 PostgreSQL（双 schema + db:\*:pg 脚本 + docker-compose.yml）、多实例部署设 CACHE_STORE=redis、日志聚合接入。

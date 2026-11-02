@@ -41,6 +41,16 @@ export function validateEnv(config: EnvRecord): EnvRecord {
     errors.push('生产环境必须通过 DATABASE_URL 提供数据库连接串');
   }
 
+  // 缓存存储：memory（默认）| redis；选择 redis 时必须显式提供连接串（fail-fast）
+  const cacheStore = String(config.CACHE_STORE ?? 'memory').trim();
+  if (cacheStore !== 'memory' && cacheStore !== 'redis') {
+    errors.push(`CACHE_STORE 无效：${cacheStore}（可选：memory/redis）`);
+  }
+  const redisUrl = typeof config.REDIS_URL === 'string' ? config.REDIS_URL.trim() : '';
+  if (cacheStore === 'redis' && !redisUrl) {
+    errors.push('CACHE_STORE=redis 时必须通过 REDIS_URL 提供 Redis 连接串（如 redis://localhost:6379）');
+  }
+
   if (errors.length > 0) {
     throw new Error(`环境变量校验失败，进程终止：\n  - ${errors.join('\n  - ')}`);
   }
@@ -51,5 +61,7 @@ export function validateEnv(config: EnvRecord): EnvRecord {
     PORT: port,
     LOG_LEVEL: logLevel,
     JWT_SECRET: rawSecret || DEV_DEFAULT_JWT_SECRET,
+    CACHE_STORE: cacheStore,
+    REDIS_URL: redisUrl,
   };
 }

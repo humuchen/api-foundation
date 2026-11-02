@@ -32,6 +32,8 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     info: unknown,
   ): TUser {
     if (err || !user) {
+      // 策略层主动抛出的业务异常（凭证已撤销/类型错误）原样透出，保留细分语义
+      if (err instanceof BizException) throw err;
       if (info instanceof TokenExpiredError) throw new BizException(ErrorCode.TOKEN_EXPIRED);
       throw new BizException(ErrorCode.UNAUTHORIZED);
     }

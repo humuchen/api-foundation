@@ -12,6 +12,8 @@ export default defineConfig({
     include: ['src/**/*.spec.ts', 'test/**/*.e2e-spec.ts'],
     testTimeout: 30_000,
     hookTimeout: 30_000,
+    // E2E spec 共享 dev.db（SQLite 单写者）：文件级串行，避免并发写锁竞争
+    fileParallelism: false,
   },
   plugins: [
     swc.vite({

@@ -10,6 +10,8 @@ export interface UserEntity {
   passwordHash: string;
   nickname: string;
   roles: string[];
+  /** 租户归属：null = 平台级账号（不受租户隔离约束） */
+  tenantId: string | null;
   disabled: boolean;
   createdAt: string;
   updatedAt: string;
@@ -20,6 +22,8 @@ export interface FindPageParams {
   take: number;
   keyword?: string;
   role?: string;
+  /** 租户过滤：提供时仅返回该租户用户（平台级账号不在此列） */
+  tenantId?: string;
   order: Record<string, 'ASC' | 'DESC'>;
 }
 
@@ -28,6 +32,8 @@ export interface CreateParams {
   passwordHash: string;
   nickname: string;
   roles: string[];
+  /** 创建时的租户归属：来自 X-Tenant-Id 上下文，缺省为平台级（null） */
+  tenantId?: string | null;
 }
 
 type UserRow = Prisma.UserGetPayload<Record<string, never>>;
@@ -81,6 +87,10 @@ export class UserRepository implements OnModuleInit {
       // 角色以 JSON 子串匹配（如 "user"），与计数同层保证 total 正确
       where.rolesJson = { contains: `"${params.role}"` };
     }
+    if (params.tenantId) {
+      // 租户行级隔离（列表路径）：仅返回该租户用户；平台级账号（null）不在此列
+      where.tenantId = params.tenantId;
+    }
     const [field, dir] = Object.entries(params.order)[0] ?? ['createdAt', 'DESC'];
     const orderBy = { [field]: dir.toLowerCase() as 'asc' | 'desc' };
 
@@ -112,6 +122,7 @@ export class UserRepository implements OnModuleInit {
         passwordHash: data.passwordHash,
         nickname: data.nickname,
         rolesJson: JSON.stringify(data.roles),
+        tenantId: data.tenantId ?? null,
       },
     });
     return this.toEntity(row);
@@ -153,6 +164,7 @@ export class UserRepository implements OnModuleInit {
       passwordHash: row.passwordHash,
       nickname: row.nickname,
       roles,
+      tenantId: row.tenantId,
       disabled: row.disabled,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),

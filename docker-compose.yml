@@ -1,0 +1,24 @@
+# 本地 PostgreSQL 实例（配合 prisma/schema.postgres.prisma 使用）：
+#   docker compose up -d
+#   DATABASE_URL="postgresql://api:api_password@localhost:5432/api_foundation" pnpm run db:migrate:pg
+# 生产环境请使用托管数据库并更换强口令；本文件仅用于本地开发与联调。
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: api-foundation-postgres
+    environment:
+      POSTGRES_USER: api
+      POSTGRES_PASSWORD: api_password
+      POSTGRES_DB: api_foundation
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U api -d api_foundation']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:

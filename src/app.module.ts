@@ -1,6 +1,6 @@
 import { HttpStatus, Module, ValidationPipe } from '@nestjs/common';
-import { CacheModule } from '@nestjs/cache-manager';
-import { ConfigModule } from '@nestjs/config';
+import { CacheModule, type CacheManagerOptions } from '@nestjs/cache-manager';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
@@ -41,8 +41,19 @@ import { UserModule } from './modules/user';
     }),
     // 全局限流：默认每 IP 每 60s 100 次；登录/刷新端点以 @Throttle 收紧
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
-    // 缓存：默认内存存储（cache-manager/Keyv）；生产接入 Redis 仅需替换 stores 配置
-    CacheModule.register({ isGlobal: true }),
+    // 缓存：默认内存存储（cache-manager/Keyv）；CACHE_STORE=redis 时切换为 Redis，
+    // 缓存与幂等共享同一 Cache 实例——多实例部署仅需外置此存储，业务代码零改动
+    CacheModule.registerAsync({
+      isGlobal: true,
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService): Promise<CacheManagerOptions> => {
+        if (configService.get<string>('cache.store') === 'redis') {
+          const { default: KeyvRedis } = await import('@keyv/redis');
+          return { stores: [new KeyvRedis(configService.getOrThrow<string>('cache.redisUrl'))] };
+        }
+        return {};
+      },
+    }),
     // 进程内事件总线：域事件解耦（跨进程可按事件契约替换为 MQ 实现）
     EventEmitterModule.forRoot(),
     LoggerModule,

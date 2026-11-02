@@ -28,7 +28,7 @@
             "bearer": []
           }
         ],
-        "summary": "最近审计记录（admin；新→旧）",
+        "summary": "最近审计记录（admin；新→旧；持久化于数据库，异常时回退内存）",
         "tags": [
           "audit"
         ]
@@ -78,7 +78,37 @@
             "description": ""
           }
         },
-        "summary": "刷新凭证（公开端点；用 refreshToken 换取新的 access/refresh 对）",
+        "summary": "刷新凭证（公开端点；旧 refresh 一次性轮换，重放即 20001）",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "operationId": "AuthController_logout_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LogoutDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "登出：吊销当前 access 凭证与可选 refreshToken（黑名单至自然过期；黑名单存于全局 Cache，多实例态共享）",
         "tags": [
           "auth"
         ]
@@ -337,6 +367,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "tags": [
           "Hello"
         ]
@@ -351,6 +386,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "tags": [
           "Hello"
         ]
@@ -365,6 +405,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "tags": [
           "Hello"
         ]
@@ -379,6 +424,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "v2 示例：结构化返回（与 v1 的纯文本不同，展示版本间响应形态演进）",
         "tags": [
           "hello"
@@ -388,6 +438,20 @@
     "/api/v1/health": {
       "get": {
         "operationId": "HealthController_check_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/api/v1/health/ready": {
+      "get": {
+        "operationId": "HealthController_ready_v1",
         "parameters": [],
         "responses": {
           "200": {
@@ -457,6 +521,15 @@
         "required": [
           "refreshToken"
         ]
+      },
+      "LogoutDto": {
+        "type": "object",
+        "properties": {
+          "refreshToken": {
+            "type": "string",
+            "description": "可选：同时吊销该 refreshToken（登出全设备时传入）"
+          }
+        }
       },
       "CreateUserDto": {
         "type": "object",

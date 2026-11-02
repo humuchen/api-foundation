@@ -1,5 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, MaxLength, MinLength } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsNotEmpty, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 
 export class LoginDto {
   @ApiProperty({ example: 'admin', description: '用户名' })
@@ -20,4 +20,14 @@ export class RefreshTokenDto {
   @IsString()
   @IsNotEmpty({ message: 'refreshToken 不能为空' })
   refreshToken!: string;
+}
+
+export class LogoutDto {
+  @ApiPropertyOptional({
+    description: '可选：同时吊销该 refreshToken（登出全设备时传入）',
+    type: String,
+  })
+  @IsOptional()
+  @IsString()
+  refreshToken?: string;
 }
