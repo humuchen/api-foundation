@@ -1,5 +1,5 @@
 import { SetMetadata, type CustomDecorator } from '@nestjs/common';
-import { PUBLIC_KEY } from '../constants/metadata.constants';
+import { PUBLIC_KEY } from '../constants/metadata.constants.js';
 
 /**
  * 标记端点为公开资源（如 /health、/auth/login）。

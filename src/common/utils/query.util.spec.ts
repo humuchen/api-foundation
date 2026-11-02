@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { BizException } from '../exceptions/biz.exception';
-import { ErrorCode } from '../error-codes';
-import { PaginationDto } from '../dto/pagination.dto';
-import { toQueryOptions } from './query.util';
+import { BizException } from '../exceptions/biz.exception.js';
+import { ErrorCode } from '../error-codes.js';
+import { PaginationDto } from '../dto/pagination.dto.js';
+import { toQueryOptions } from './query.util.js';
 
 describe('toQueryOptions（分页 → 中立查询结构）', () => {
   it('默认参数：page=1 / pageSize=20 → createdAt DESC', () => {

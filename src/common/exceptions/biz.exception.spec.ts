@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { HttpStatus } from '@nestjs/common';
-import { ErrorCode } from '../error-codes';
-import { BizException } from './biz.exception';
+import { ErrorCode } from '../error-codes.js';
+import { BizException } from './biz.exception.js';
 
 describe('BizException（业务异常 → 错误码/HTTP 状态映射）', () => {
   it('默认 message 与 HTTP 状态取自错误码表', () => {

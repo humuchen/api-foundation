@@ -11,21 +11,27 @@ NestJS 12.3.0 + Express + TypeScript 5.9 的通用后端接口底座：统一响
 
 包管理器：**pnpm ≥ 10**（锁文件 `pnpm-lock.yaml`；构建脚本白名单见 `pnpm-workspace.yaml` 的 `allowBuilds`）。
 
+模块体系：**原生 ESM**（`"type": "module"` + tsconfig NodeNext，相对导入显式 `.js` 扩展名）。dev/start/openapi 经 `@swc-node/register/esm-register` 运行 TS（SWC 转译，支持 `emitDecoratorMetadata`）；Vitest 原生 ESM 直连；生产产物 `dist/` 由 Node 直接执行，无需任何 loader。纯 CJS 依赖（如 jsonwebtoken）具名导出无法被 Node 静态探测的，统一采用「默认导入 + 解构」（见 jwt-auth.guard）。
+
 ```bash
 pnpm install
-pnpm run dev        # 开发（node --watch + ts-node，pino-pretty 美化输出）
+pnpm run dev        # 开发（node --watch + @swc-node/register，pino-pretty 美化输出）
 pnpm run build      # 编译到 dist/（tsconfig.build.json，严格模式）
 pnpm run prod       # 生产运行（读取 dist/）
 pnpm test           # 全部测试（单元 + E2E，Vitest + SWC）
 pnpm run test:e2e   # 仅 E2E
 pnpm run db:migrate # Prisma 迁移（首次部署执行；dev.db 自动创建）
 pnpm run db:generate # Prisma 客户端生成（schema 变更后；pnpm 布局下 postinstall 不自动触发时执行此命令）
+pnpm run db:generate:pg # PostgreSQL 变体生成（--schema prisma/schema.postgres.prisma）
+pnpm run db:migrate:pg  # PostgreSQL 迁移（配合 docker-compose.yml 本地实例）
 pnpm run openapi:export # 导出 openapi.json（前端代码生成/网关导入）
 ```
 
 > 迁移自 npm：`node_modules` 与 `package-lock.json` 已移除；pnpm 严格布局下曾暴露两个幻影依赖（`ms`、`jsonwebtoken`）并已补为直接依赖。
 
 数据层：**Prisma 6 + SQLite**（零外部依赖，仓储按异步契约实现，可整体切换 PostgreSQL/MySQL 而不动业务代码）。开发环境缺省 `DATABASE_URL=file:./dev.db`；生产环境必须显式提供连接串（启动校验 fail-fast）。角色字段以 JSON 序列化存于 `rolesJson`（SQLite 无标量数组）。
+
+PostgreSQL 切换：双 schema 并行维护（`schema.prisma` 开发态 / `schema.postgres.prisma` 生产态，模型一一对应、须同步演进）；`docker compose up -d` 提供本地 PG 16 实例，`.env` 改 `DATABASE_URL` 后执行 `pnpm run db:migrate:pg` 即完成切换，业务代码零改动。
 
 ## 架构分层
 
@@ -47,16 +53,18 @@ src/
 | 方法 | 路径 | 鉴权 | 说明 |
 |------|------|------|------|
 | POST | /auth/login | 公开 | 登录签发双凭证（限流 5 次/分钟）。内置账号：admin/admin123、ops/ops123456、demo/demo123456 |
-| POST | /auth/refresh | 公开 | refreshToken 换取新凭证对（限流 10 次/分钟；refresh 不能访问业务接口） |
+| POST | /auth/refresh | 公开 | refreshToken 换取新凭证对（限流 10 次/分钟；**一次性轮换**：旧 refresh 用后即吊销，重放 20001） |
+| POST | /auth/logout | 登录 | 登出：吊销当前 access 与可选 refreshToken（jti 黑名单至自然过期） |
 | GET  | /auth/profile | 登录 | 当前用户（@CurrentUser 示例） |
 | GET  | /users/me | 登录 | 我的信息 |
-| GET  | /users | admin | 分页查询（结果缓存 30s，写操作版本号失效） |
-| GET/POST/PATCH/DELETE | /users/:id | admin | 用户 CRUD（写操作带审计；POST 支持 Idempotency-Key 幂等重放） |
-| GET  | /audit | admin | 最近审计记录（含租户上下文与脱敏入参） |
+| GET  | /users | admin | 分页查询（结果缓存 30s，写操作版本号失效；**按 X-Tenant-Id 行级隔离**） |
+| GET/POST/PATCH/DELETE | /users/:id | admin | 用户 CRUD（写操作带审计；POST 支持 Idempotency-Key 幂等重放；创建注入租户归属） |
+| GET  | /audit | admin | 最近审计记录（**持久化 audit_logs 表**，含租户上下文与脱敏入参） |
 | GET  | /hello | 登录 | 最小示例（v1） |
 | GET  | /hello/error | 登录 | BizException 演示（30000/HTTP 422） |
 | GET  | /api/v2/hello | 公开 | URI 版本化 v2 演示（与 v1 并行） |
-| GET  | /health | 公开 | 存活探针 |
+| GET  | /health | 公开 | 存活探针（liveness） |
+| GET  | /health/ready | 公开 | 就绪探针（readiness：SELECT 1 校验数据库，失败 50002） |
 
 - Swagger：`http://localhost:3000/docs`（在线调试，右上角 Authorize 填入 token）
 - OpenAPI 导出：`npm run openapi:export` → `openapi.json`（供前端代码生成/网关导入）
@@ -71,13 +79,15 @@ src/
 - **审计**：`@Audit('user:create', { includeBody: true })` 标注写操作；异步记录、敏感字段（password/token/secret）强制脱敏；`GET /audit`（admin）查询。
 - **限流**：全局 100 次/分钟/IP（429 → 50003）；登录端点收紧至 5 次/分钟。
 - **安全加固**：helmet 安全响应头（开发环境关闭 CSP 以保 Swagger）、请求体 ≤256KB（413 → 10002）、CORS 白名单（生产未配置 `CORS_ORIGINS` 则拒绝跨域）。
-- **测试**：Vitest + SWC（`@nestjs/common` 12 为 ESM-only，Jest 不适用）；12 个单测（分页转换/响应构造/异常映射）+ 9 个 E2E（鉴权/RBAC/分页/校验/审计脱敏/兜底，走真实 SQLite）。
+- **测试**：Vitest + SWC（`@nestjs/common` 12 为 ESM-only，Jest 不适用）；12 个单测（分页转换/响应构造/异常映射）+ 18 个 E2E 按域拆分（auth：双凭证/轮换/登出黑名单；users：RBAC/分页/幂等/租户隔离；foundation：探针/审计脱敏/兜底），走真实 SQLite，文件级串行。
 - **类型安全**：tsconfig `strict: true` 全量开启（src + test + 配置文件），构建经 `tsconfig.build.json` 仅产出业务代码。
-- **缓存**：@nestjs/cache-manager（默认内存/Keyv，生产接入 Redis 仅替换 stores）；分页结果按查询指纹缓存，版本号递增实现批量失效（Keyv 无前缀扫描）。
-- **幂等**：`@Idempotent()` 端点支持 Idempotency-Key——重放返回首次结果（`X-Idempotent-Replayed: true`）、在途请求合并、失败不入缓存可重试、TTL 24h。
+- **缓存**：@nestjs/cache-manager（默认内存/Keyv）；`CACHE_STORE=redis` + `REDIS_URL` 一键外置（缓存/幂等/凭证黑名单共享同一 Cache 实例，业务零改动）；分页结果按查询指纹缓存，**缓存键含租户段**，版本号递增实现批量失效（Keyv 无前缀扫描）。
+- **幂等**：`@Idempotent()` 端点支持 Idempotency-Key——重放返回首次结果（`X-Idempotent-Replayed: true`）、在途请求合并、失败不入缓存可重试、TTL 24h；存储随 CACHE_STORE 外置。
+- **审计持久化**：写入 Prisma `audit_logs` 表（异步 fire-and-forget，不阻塞响应）；数据库异常降级内存环形缓冲 + pino 告警；敏感字段（password/token/secret）强制脱敏。
+- **凭证治理**：每张凭证携带 `jti`；refresh **一次性轮换**（换新后旧 refresh 即入黑名单，重放 20001）；`POST /auth/logout` 吊销当前 access 与可选 refreshToken；黑名单存于全局 Cache（memory/Redis），JwtStrategy 每次鉴权校验。
 - **领域事件**：@nestjs/event-emitter 进程内总线（`user.changed`）；跨进程需求按同一事件契约替换为 BullMQ/RabbitMQ。
 - **双凭证**：access（2h，typ=access）+ refresh（7d，typ=refresh）；策略层拒绝刷新凭证访问业务接口。
 - **版本化**：全局前缀 `api` + URI 版本化（默认 v1），新版本以 `@Controller({ version: '2' })` 并行发布。
-- **租户上下文**：X-Tenant-Id（白名单字符校验）经 ALS 贯通日志与审计；数据层隔离策略由业务按需实现。
+- **租户上下文**：X-Tenant-Id（白名单字符校验）经 ALS 贯通日志与审计；**行级隔离参考实现**：列表按租户过滤（平台级 tenantId=null 账号对租户视角隐藏）、创建注入租户归属；详情/自我查询/登录不隔离（平台管理需要）。
 
 规划详情见 `docs/api-foundation-plan.md`。

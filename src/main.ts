@@ -2,11 +2,11 @@ import 'reflect-metadata';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { SwaggerModule } from '@nestjs/swagger';
-import { AppModule } from './app.module';
-import { configureApiBase } from './config/api-base';
-import { buildOpenapiDocument } from './config/openapi';
-import { applyHttpHardening } from './config/http-hardening';
-import { AppLoggerService, getLogger, initLogger, requestContextMiddleware } from './infra/logger';
+import { AppModule } from './app.module.js';
+import { configureApiBase } from './config/api-base.js';
+import { buildOpenapiDocument } from './config/openapi.js';
+import { applyHttpHardening } from './config/http-hardening.js';
+import { AppLoggerService, getLogger, initLogger, requestContextMiddleware } from './infra/logger/index.js';
 
 async function bootstrap(): Promise<void> {
   // 1. pino 先于 NestFactory 初始化，确保框架内部启动日志统一走 pino

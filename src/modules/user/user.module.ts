@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
-import { UserController } from './user.controller';
-import { UserEventsListener } from './user.events';
-import { UserRepository } from './user.repository';
-import { UserService } from './user.service';
+import { UserController } from './user.controller.js';
+import { UserEventsListener } from './user.events.js';
+import { UserRepository } from './user.repository.js';
+import { UserService } from './user.service.js';
 
 @Module({
   controllers: [UserController],

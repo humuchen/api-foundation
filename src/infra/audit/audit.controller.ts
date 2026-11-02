@@ -1,8 +1,8 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Roles } from '../../common/decorators/roles.decorator';
-import { AuditEntry, AuditService } from './audit.service';
-import { AuditQueryDto } from './audit.dto';
+import { Roles } from '../../common/decorators/roles.decorator.js';
+import { AuditEntry, AuditService } from './audit.service.js';
+import { AuditQueryDto } from './audit.dto.js';
 
 @ApiTags('audit')
 @ApiBearerAuth()
@@ -12,9 +12,9 @@ export class AuditController {
   constructor(private readonly auditService: AuditService) {}
 
   @Get()
-  @ApiOperation({ summary: '最近审计记录（admin；新→旧）' })
-  list(@Query() query: AuditQueryDto): { total: number; list: AuditEntry[] } {
-    const list = this.auditService.list(query.limit);
+  @ApiOperation({ summary: '最近审计记录（admin；新→旧；持久化于数据库，异常时回退内存）' })
+  async list(@Query() query: AuditQueryDto): Promise<{ total: number; list: AuditEntry[] }> {
+    const list = await this.auditService.list(query.limit);
     return { total: list.length, list };
   }
 }

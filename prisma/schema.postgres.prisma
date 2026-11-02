@@ -1,0 +1,54 @@
+// PostgreSQL 生产变体 schema —— 与 schema.prisma（SQLite 开发态）模型一一对应。
+// 用法（所有 prisma 命令追加 --schema 参数即可切换，业务代码零改动）：
+//   pnpm prisma migrate dev  --schema prisma/schema.postgres.prisma
+//   pnpm prisma generate     --schema prisma/schema.postgres.prisma
+// 或使用 package.json 中的 db:*:pg 快捷脚本。
+// 约定：两份 schema 必须同步演进（新增模型/字段时双写）。
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  username     String   @unique
+  passwordHash String
+  nickname     String
+  // 角色仍以 JSON 字符串存储以保证与 SQLite 版仓储代码零差异；
+  // 如需 JSONB 下推过滤（roles: { array_contains }），将本字段改为
+  //   roles Json @default("[]")
+  // 并同步调整 user.repository 的读写与 role 过滤两处映射。
+  rolesJson    String   @default("[]")
+  // 租户归属：null = 平台级账号（不受租户隔离约束）
+  tenantId     String?
+  disabled     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([tenantId])
+  @@map("users")
+}
+
+// 审计持久化；bodyJson 可改为 Json 类型（PG 支持），当前保持与仓储代码零差异
+model AuditLog {
+  id            String   @id @default(uuid())
+  requestId     String
+  tenantId      String?
+  action        String
+  method        String
+  path          String
+  actorId       String?
+  actorUsername String?
+  bodyJson      String?
+  success       Boolean
+  durationMs    Int
+  createdAt     DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("audit_logs")
+}

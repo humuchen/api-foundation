@@ -2,11 +2,11 @@ import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nes
 import { Reflector } from '@nestjs/core';
 import { Observable, tap } from 'rxjs';
 import type { Request } from 'express';
-import { AUDIT_KEY } from '../../common/constants/metadata.constants';
-import type { AuditMeta } from '../../common/decorators/audit.decorator';
-import { getRequestId, getRequestContext } from '../logger';
-import type { AuthUser } from '../auth/auth.types';
-import { AuditService } from './audit.service';
+import { AUDIT_KEY } from '../../common/constants/metadata.constants.js';
+import type { AuditMeta } from '../../common/decorators/audit.decorator.js';
+import { getRequestId, getRequestContext } from '../logger/index.js';
+import type { AuthUser } from '../auth/auth.types.js';
+import { AuditService } from './audit.service.js';
 
 /**
  * 审计拦截器（APP_INTERCEPTOR 全局注册）：

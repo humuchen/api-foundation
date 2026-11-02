@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from 'express';
-import { createRequestContext, runWithRequestContext } from './request-context';
+import { createRequestContext, runWithRequestContext } from './request-context.js';
 
 /**
  * 请求上下文中间件：生成/透传 requestId → 写回响应头 → 建立 AsyncLocalStorage 作用域。

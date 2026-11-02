@@ -1,5 +1,5 @@
 import { SetMetadata, type CustomDecorator } from '@nestjs/common';
-import { AUDIT_KEY } from '../constants/metadata.constants';
+import { AUDIT_KEY } from '../constants/metadata.constants.js';
 
 export interface AuditMeta {
   /** 审计动作标识，约定 <模块>:<动作>，如 user:create */

@@ -1,5 +1,5 @@
 import pino from 'pino';
-import { getRequestContext } from './request-context';
+import { getRequestContext } from './request-context.js';
 
 const LOG_LEVELS = ['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'];
 

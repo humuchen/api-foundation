@@ -3,9 +3,9 @@ process.env.LOG_LEVEL = 'silent';
 import 'reflect-metadata';
 import { writeFileSync } from 'node:fs';
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from '../src/app.module';
-import { configureApiBase } from '../src/config/api-base';
-import { buildOpenapiDocument } from '../src/config/openapi';
+import { AppModule } from '../src/app.module.js';
+import { configureApiBase } from '../src/config/api-base.js';
+import { buildOpenapiDocument } from '../src/config/openapi.js';
 
 /**
  * 导出 OpenAPI 规范到 openapi.json（npm run openapi:export）。

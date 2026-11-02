@@ -26,4 +26,9 @@ export default () => ({
       ? process.env.CORS_ORIGINS.split(',').map((s) => s.trim()).filter(Boolean)
       : [],
   },
+  cache: {
+    // 存储后端：memory（默认，零依赖）| redis（多实例共享；REDIS_URL 必填，见 env.validation）
+    store: process.env.CACHE_STORE ?? 'memory',
+    redisUrl: process.env.REDIS_URL ?? '',
+  },
 });

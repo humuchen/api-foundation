@@ -1,12 +1,12 @@
 import { Body, Controller, Get, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
-import { Audit } from '../../common/decorators/audit.decorator';
-import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { Public } from '../../common/decorators/public.decorator';
-import type { AuthUser, LoginResult } from './auth.types';
-import { AuthService } from './auth.service';
-import { LoginDto, RefreshTokenDto } from './auth.dto';
+import { Audit } from '../../common/decorators/audit.decorator.js';
+import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
+import { Public } from '../../common/decorators/public.decorator.js';
+import type { AuthUser, LoginResult } from './auth.types.js';
+import { AuthService } from './auth.service.js';
+import { LoginDto, LogoutDto, RefreshTokenDto } from './auth.dto.js';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -27,9 +27,20 @@ export class AuthController {
   @Post('refresh')
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Audit('auth:refresh', { includeBody: true }) // refreshToken 由 AuditService.mask 强制脱敏
-  @ApiOperation({ summary: '刷新凭证（公开端点；用 refreshToken 换取新的 access/refresh 对）' })
+  @ApiOperation({ summary: '刷新凭证（公开端点；旧 refresh 一次性轮换，重放即 20001）' })
   refresh(@Body() dto: RefreshTokenDto): Promise<LoginResult> {
     return this.authService.refresh(dto);
+  }
+
+  @Post('logout')
+  @ApiBearerAuth()
+  @Audit('auth:logout')
+  @ApiOperation({
+    summary:
+      '登出：吊销当前 access 凭证与可选 refreshToken（黑名单至自然过期；黑名单存于全局 Cache，多实例态共享）',
+  })
+  logout(@CurrentUser() user: AuthUser, @Body() dto: LogoutDto): Promise<{ id: string }> {
+    return this.authService.logout(user, dto);
   }
 
   @Get('profile')

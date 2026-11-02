@@ -1,5 +1,5 @@
 import { HttpException } from '@nestjs/common';
-import { getErrorMeta } from '../error-codes';
+import { getErrorMeta } from '../error-codes.js';
 
 /**
  * 业务异常：业务代码主动抛出的唯一入口。

@@ -1,4 +1,4 @@
-import { ErrorCode, getErrorMeta } from '../error-codes';
+import { ErrorCode, getErrorMeta } from '../error-codes.js';
 
 /** 全站统一响应包壳（由 TransformInterceptor / AllExceptionsFilter 保证） */
 export interface ApiResponse<T = unknown> {

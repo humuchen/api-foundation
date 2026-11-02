@@ -8,3 +8,5 @@ dist/
 .workbuddy/
 .wbapp_*.genie
 .vscode
+
+prisma/*.db
