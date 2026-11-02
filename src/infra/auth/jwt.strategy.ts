@@ -3,10 +3,10 @@ import { ConfigService } from '@nestjs/config';
 import { Cache } from '@nestjs/cache-manager';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
-import { ErrorCode } from '../../common/error-codes';
-import { BizException } from '../../common/exceptions/biz.exception';
-import { JWT_BLACKLIST_PREFIX } from './auth.constants';
-import type { AuthUser, VerifiedJwtPayload } from './auth.types';
+import { ErrorCode } from '../../common/error-codes.js';
+import { BizException } from '../../common/exceptions/biz.exception.js';
+import { JWT_BLACKLIST_PREFIX } from './auth.constants.js';
+import type { AuthUser, VerifiedJwtPayload } from './auth.types.js';
 
 /**
  * JWT 策略：解析 Bearer token → 校验签名与有效期 → 黑名单校验 → validate 注入 req.user。

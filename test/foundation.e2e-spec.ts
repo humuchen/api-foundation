@@ -4,7 +4,7 @@ import 'reflect-metadata';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { createTestApp, getAuditList, login, pollUntil } from './helpers';
+import { createTestApp, getAuditList, login, pollUntil } from './helpers.js';
 
 /**
  * 底座域 E2E：存活/就绪探针 / 全局鉴权默认拒绝 / 统一响应与 404 兜底 /

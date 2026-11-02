@@ -7,10 +7,10 @@ import {
   Logger,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
-import { BizException } from '../exceptions/biz.exception';
-import { ErrorCode } from '../error-codes';
-import { buildFailure } from '../responses/api-response';
-import { getRequestId } from '../../infra/logger';
+import { BizException } from '../exceptions/biz.exception.js';
+import { ErrorCode } from '../error-codes.js';
+import { buildFailure } from '../responses/api-response.js';
+import { getRequestId } from '../../infra/logger/index.js';
 
 interface NormalizedError {
   httpStatus: number;

@@ -1,12 +1,12 @@
 import { Body, Controller, Get, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
-import { Audit } from '../../common/decorators/audit.decorator';
-import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { Public } from '../../common/decorators/public.decorator';
-import type { AuthUser, LoginResult } from './auth.types';
-import { AuthService } from './auth.service';
-import { LoginDto, LogoutDto, RefreshTokenDto } from './auth.dto';
+import { Audit } from '../../common/decorators/audit.decorator.js';
+import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
+import { Public } from '../../common/decorators/public.decorator.js';
+import type { AuthUser, LoginResult } from './auth.types.js';
+import { AuthService } from './auth.service.js';
+import { LoginDto, LogoutDto, RefreshTokenDto } from './auth.dto.js';
 
 @ApiTags('auth')
 @Controller('auth')

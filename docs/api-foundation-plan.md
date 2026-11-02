@@ -14,7 +14,7 @@
 | --------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | 框架      | NestJS 12.3.0（正式版）                  | swagger/jwt/passport/throttler 集成包均以 v12 兼容版本锁定                                                          |
 | HTTP 平台 | @nestjs/platform-express + express 5.3.0 | **express 已显式声明为直接依赖**（pnpm 严格布局下，直接 import 的包必须声明；与 platform-express 共享同一物理实例） |
-| 语言      | TypeScript 5.9.3, CommonJS, ES2021       | **strict: true 已全量开启**（规划中的"渐进收紧"已一步到位）                                                         |
+| 语言      | TypeScript 5.9.3, **原生 ESM**（NodeNext）, ES2021 | **strict: true 全量开启**；`"type": "module"`，相对导入显式 `.js`，TS 运行经 @swc-node/register（2026-11-02 由 CommonJS 迁移，依赖 Node 22 的 require(esm) 兼容层随之移除）  |
 | 数据层    | Prisma 6.19 + SQLite（dev.db）           | 零外部依赖起步，生产可平滑切换 PostgreSQL/MySQL；User 模型的 roles 以 JSON 字符串存储，仓储层负责映射               |
 | 日志      | pino 10 自封装（infra/logger）           | 替代规划的 nestjs-pino；Nest 内置 Logger 已桥接至 pino                                                              |
 | 测试      | vitest 5 + supertest                     | 替代规划的 jest；3 个底座单测 + 1 个 E2E 冒烟                                                                       |

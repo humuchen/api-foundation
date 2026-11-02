@@ -1,5 +1,5 @@
 import { Injectable, LoggerService } from '@nestjs/common';
-import { getLogger } from './logger';
+import { getLogger } from './logger.js';
 
 type PinoLevel = 'info' | 'error' | 'warn' | 'debug';
 

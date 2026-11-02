@@ -1,7 +1,7 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Public } from '../../common/decorators/public.decorator';
-import { HelloQueryDto } from './hello.dto';
+import { Public } from '../../common/decorators/public.decorator.js';
+import { HelloQueryDto } from './hello.dto.js';
 
 /** v2 并行版本演示：URI 版本化（/api/v2/hello），与 v1 各自独立演进 */
 @ApiTags('hello')

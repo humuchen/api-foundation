@@ -1,8 +1,8 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Roles } from '../../common/decorators/roles.decorator';
-import { AuditEntry, AuditService } from './audit.service';
-import { AuditQueryDto } from './audit.dto';
+import { Roles } from '../../common/decorators/roles.decorator.js';
+import { AuditEntry, AuditService } from './audit.service.js';
+import { AuditQueryDto } from './audit.dto.js';
 
 @ApiTags('audit')
 @ApiBearerAuth()

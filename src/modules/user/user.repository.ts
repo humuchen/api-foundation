@@ -1,7 +1,7 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { hashSync } from 'bcryptjs';
-import { PrismaService } from '../../infra/database/prisma.service';
+import { PrismaService } from '../../infra/database/prisma.service.js';
 
 /** 用户实体（应用层形态；与 Prisma 行记录经 toEntity 映射） */
 export interface UserEntity {

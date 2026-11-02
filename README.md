@@ -11,9 +11,11 @@ NestJS 12.3.0 + Express + TypeScript 5.9 的通用后端接口底座：统一响
 
 包管理器：**pnpm ≥ 10**（锁文件 `pnpm-lock.yaml`；构建脚本白名单见 `pnpm-workspace.yaml` 的 `allowBuilds`）。
 
+模块体系：**原生 ESM**（`"type": "module"` + tsconfig NodeNext，相对导入显式 `.js` 扩展名）。dev/start/openapi 经 `@swc-node/register/esm-register` 运行 TS（SWC 转译，支持 `emitDecoratorMetadata`）；Vitest 原生 ESM 直连；生产产物 `dist/` 由 Node 直接执行，无需任何 loader。纯 CJS 依赖（如 jsonwebtoken）具名导出无法被 Node 静态探测的，统一采用「默认导入 + 解构」（见 jwt-auth.guard）。
+
 ```bash
 pnpm install
-pnpm run dev        # 开发（node --watch + ts-node，pino-pretty 美化输出）
+pnpm run dev        # 开发（node --watch + @swc-node/register，pino-pretty 美化输出）
 pnpm run build      # 编译到 dist/（tsconfig.build.json，严格模式）
 pnpm run prod       # 生产运行（读取 dist/）
 pnpm test           # 全部测试（单元 + E2E，Vitest + SWC）

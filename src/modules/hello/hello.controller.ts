@@ -1,8 +1,8 @@
 import { Controller, Get, Query } from '@nestjs/common';
-import { ErrorCode } from '../../common/error-codes';
-import { BizException } from '../../common/exceptions/biz.exception';
-import { HelloQueryDto } from './hello.dto';
-import { HelloService } from './hello.service';
+import { ErrorCode } from '../../common/error-codes.js';
+import { BizException } from '../../common/exceptions/biz.exception.js';
+import { HelloQueryDto } from './hello.dto.js';
+import { HelloService } from './hello.service.js';
 import { ApiBearerAuth } from '@nestjs/swagger';
 
 /** 旧路由 GET / 、GET /hello/world 迁移为 /api/v1/hello 、/api/v1/hello/world */

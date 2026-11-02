@@ -4,12 +4,12 @@ import { Cache } from '@nestjs/cache-manager';
 import { JwtService } from '@nestjs/jwt';
 import { randomUUID } from 'node:crypto';
 import type { StringValue } from 'ms';
-import { ErrorCode } from '../../common/error-codes';
-import { BizException } from '../../common/exceptions/biz.exception';
-import { UserVo, UserService } from '../../modules/user/user.service';
-import type { LoginDto, LogoutDto, RefreshTokenDto } from './auth.dto';
-import { JWT_BLACKLIST_PREFIX } from './auth.constants';
-import type { JwtPayload, LoginResult, TokenType, VerifiedJwtPayload } from './auth.types';
+import { ErrorCode } from '../../common/error-codes.js';
+import { BizException } from '../../common/exceptions/biz.exception.js';
+import { UserVo, UserService } from '../../modules/user/user.service.js';
+import type { LoginDto, LogoutDto, RefreshTokenDto } from './auth.dto.js';
+import { JWT_BLACKLIST_PREFIX } from './auth.constants.js';
+import type { JwtPayload, LoginResult, TokenType, VerifiedJwtPayload } from './auth.types.js';
 
 /**
  * 认证服务：凭证校验委托给用户域（UserService.verifyCredentials，失败抛 20001/20004）。

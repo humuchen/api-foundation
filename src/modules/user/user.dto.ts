@@ -10,7 +10,7 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
-import { PaginationDto } from '../../common/dto/pagination.dto';
+import { PaginationDto } from '../../common/dto/pagination.dto.js';
 
 export const USER_ROLES = ['admin', 'ops', 'user'] as const;
 

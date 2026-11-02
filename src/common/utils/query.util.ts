@@ -1,6 +1,6 @@
-import { PaginationDto } from '../dto/pagination.dto';
-import { BizException } from '../exceptions/biz.exception';
-import { ErrorCode } from '../error-codes';
+import { PaginationDto } from '../dto/pagination.dto.js';
+import { BizException } from '../exceptions/biz.exception.js';
+import { ErrorCode } from '../error-codes.js';
 
 /**
  * 分页 DTO → ORM 中立查询结构：Prisma/TypeORM 适配层可直接消费，

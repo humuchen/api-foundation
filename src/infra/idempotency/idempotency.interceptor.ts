@@ -4,7 +4,7 @@ import { Reflector } from '@nestjs/core';
 import type { Request, Response } from 'express';
 import { Observable } from 'rxjs';
 import { firstValueFrom } from 'rxjs';
-import { IDEMPOTENT_KEY } from '../../common/decorators/idempotent.decorator';
+import { IDEMPOTENT_KEY } from '../../common/decorators/idempotent.decorator.js';
 
 const IDEMPOTENCY_HEADER = 'idempotency-key';
 const REPLAY_HEADER = 'x-idempotent-replayed';

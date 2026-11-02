@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import { PrismaService } from '../database/prisma.service';
-import { getLogger } from '../logger';
+import { PrismaService } from '../database/prisma.service.js';
+import { getLogger } from '../logger/index.js';
 
 /** 审计日志条目：who / when / what / 入参摘要 / 结果 / 链路 / 租户 */
 export interface AuditEntry {

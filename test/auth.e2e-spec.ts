@@ -4,8 +4,8 @@ import 'reflect-metadata';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { createTestApp, login } from './helpers';
-import type { LoginResult } from '../src/infra/auth/auth.types';
+import { createTestApp, login } from './helpers.js';
+import type { LoginResult } from '../src/infra/auth/auth.types.js';
 
 /**
  * 认证域 E2E：双凭证签发 / refresh 轮换一次性 / refresh 防混用 / 登出黑名单。

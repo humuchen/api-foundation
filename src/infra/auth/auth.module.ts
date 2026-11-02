@@ -2,10 +2,10 @@ import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import type { StringValue } from 'ms';
-import { UserModule } from '../../modules/user';
-import { AuthController } from './auth.controller';
-import { AuthService } from './auth.service';
-import { JwtStrategy } from './jwt.strategy';
+import { UserModule } from '../../modules/user/index.js';
+import { AuthController } from './auth.controller.js';
+import { AuthService } from './auth.service.js';
+import { JwtStrategy } from './jwt.strategy.js';
 
 /**
  * 认证模块：JwtModule 异步注册（密钥/有效期走配置），导出 JwtModule

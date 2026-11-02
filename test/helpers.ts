@@ -5,10 +5,10 @@ import { expect } from 'vitest';
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import { AppModule } from '../src/app.module';
-import { configureApiBase } from '../src/config/api-base';
-import { requestContextMiddleware } from '../src/infra/logger';
-import type { LoginResult } from '../src/infra/auth/auth.types';
+import { AppModule } from '../src/app.module.js';
+import { configureApiBase } from '../src/config/api-base.js';
+import { requestContextMiddleware } from '../src/infra/logger/index.js';
+import type { LoginResult } from '../src/infra/auth/auth.types.js';
 
 /**
  * E2E 共享基建：独立应用实例（不占端口，supertest 直连）、登录封装、异步落库轮询。

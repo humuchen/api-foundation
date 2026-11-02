@@ -1,8 +1,8 @@
 import { Controller, Get } from '@nestjs/common';
-import { Public } from '../common/decorators/public.decorator';
-import { ErrorCode } from '../common/error-codes';
-import { BizException } from '../common/exceptions/biz.exception';
-import { PrismaService } from '../infra/database/prisma.service';
+import { Public } from '../common/decorators/public.decorator.js';
+import { ErrorCode } from '../common/error-codes.js';
+import { BizException } from '../common/exceptions/biz.exception.js';
+import { PrismaService } from '../infra/database/prisma.service.js';
 
 /**
  * 健康探针（@Public() 豁免全局鉴权）：

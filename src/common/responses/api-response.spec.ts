@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { ErrorCode } from '../error-codes';
-import { buildFailure, buildSuccess, isApiResponse } from './api-response';
+import { ErrorCode } from '../error-codes.js';
+import { buildFailure, buildSuccess, isApiResponse } from './api-response.js';
 
 describe('api-response（统一响应构造）', () => {
   it('buildSuccess → code=1 / ok / 透传 data 与 requestId', () => {

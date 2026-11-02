@@ -1,14 +1,14 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Audit } from '../../common/decorators/audit.decorator';
-import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { Idempotent } from '../../common/decorators/idempotent.decorator';
-import { Roles } from '../../common/decorators/roles.decorator';
-import { IdParamDto } from '../../common/dto/id-param.dto';
-import { PageVo } from '../../common/responses/page.vo';
-import type { AuthUser } from '../../infra/auth/auth.types';
-import { CreateUserDto, UpdateUserDto, UserQueryDto } from './user.dto';
-import { UserVo, UserService } from './user.service';
+import { Audit } from '../../common/decorators/audit.decorator.js';
+import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
+import { Idempotent } from '../../common/decorators/idempotent.decorator.js';
+import { Roles } from '../../common/decorators/roles.decorator.js';
+import { IdParamDto } from '../../common/dto/id-param.dto.js';
+import { PageVo } from '../../common/responses/page.vo.js';
+import type { AuthUser } from '../../infra/auth/auth.types.js';
+import { CreateUserDto, UpdateUserDto, UserQueryDto } from './user.dto.js';
+import { UserVo, UserService } from './user.service.js';
 
 /**
  * 用户管理（RBAC 参考实现）：除 /users/me 外均需 admin 角色。

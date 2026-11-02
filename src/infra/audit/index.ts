@@ -1,3 +1,3 @@
-export * from './audit.module';
-export * from './audit.service';
-export * from './audit.interceptor';
+export * from './audit.module.js';
+export * from './audit.service.js';
+export * from './audit.interceptor.js';

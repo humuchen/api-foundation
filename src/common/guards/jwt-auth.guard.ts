@@ -2,10 +2,13 @@ import { ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
 import type { Observable } from 'rxjs';
-import { TokenExpiredError } from 'jsonwebtoken';
-import { PUBLIC_KEY } from '../constants/metadata.constants';
-import { BizException } from '../exceptions/biz.exception';
-import { ErrorCode } from '../error-codes';
+// ESM 互操作：jsonwebtoken 为纯 CJS，具名导出无法被 Node 静态探测，须默认导入后解构
+import jsonwebtoken from 'jsonwebtoken';
+import { PUBLIC_KEY } from '../constants/metadata.constants.js';
+import { BizException } from '../exceptions/biz.exception.js';
+import { ErrorCode } from '../error-codes.js';
+
+const { TokenExpiredError } = jsonwebtoken;
 
 /**
  * 全局认证守卫（APP_GUARD 注册，先于 RolesGuard 执行）：

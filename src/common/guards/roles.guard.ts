@@ -1,9 +1,9 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import type { AuthUser } from '../../infra/auth/auth.types';
-import { ROLES_KEY } from '../constants/metadata.constants';
-import { BizException } from '../exceptions/biz.exception';
-import { ErrorCode } from '../error-codes';
+import type { AuthUser } from '../../infra/auth/auth.types.js';
+import { ROLES_KEY } from '../constants/metadata.constants.js';
+import { BizException } from '../exceptions/biz.exception.js';
+import { ErrorCode } from '../error-codes.js';
 
 /**
  * RBAC 角色守卫（APP_GUARD 注册，后于 JwtAuthGuard 执行）：

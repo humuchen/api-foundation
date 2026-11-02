@@ -2,14 +2,14 @@ import { Cache } from '@nestjs/cache-manager';
 import { Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { compare, hash } from 'bcryptjs';
-import { ErrorCode } from '../../common/error-codes';
-import { BizException } from '../../common/exceptions/biz.exception';
-import { buildPage, PageVo } from '../../common/responses/page.vo';
-import { toQueryOptions } from '../../common/utils/query.util';
-import { getRequestContext } from '../../infra/logger';
-import { UserChangedEvent } from './user.events';
-import { CreateUserDto, UpdateUserDto, UserQueryDto } from './user.dto';
-import { UserEntity, UserRepository } from './user.repository';
+import { ErrorCode } from '../../common/error-codes.js';
+import { BizException } from '../../common/exceptions/biz.exception.js';
+import { buildPage, PageVo } from '../../common/responses/page.vo.js';
+import { toQueryOptions } from '../../common/utils/query.util.js';
+import { getRequestContext } from '../../infra/logger/index.js';
+import { UserChangedEvent } from './user.events.js';
+import { CreateUserDto, UpdateUserDto, UserQueryDto } from './user.dto.js';
+import { UserEntity, UserRepository } from './user.repository.js';
 
 /** 可排序字段白名单（防排序注入；随实体字段扩展） */
 export const USER_SORTABLE_FIELDS = ['createdAt', 'username', 'nickname'];

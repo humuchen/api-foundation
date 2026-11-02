@@ -5,8 +5,8 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { createTestApp, login } from './helpers';
-import type { LoginResult } from '../src/infra/auth/auth.types';
+import { createTestApp, login } from './helpers.js';
+import type { LoginResult } from '../src/infra/auth/auth.types.js';
 
 /**
  * 用户域 E2E：分页契约 / RBAC / 参数校验 / 幂等键 / 缓存失效 / 租户行级隔离。
