@@ -10,7 +10,7 @@ import type { Request, Response } from 'express';
 import { BizException } from '../exceptions/biz.exception.js';
 import { ErrorCode } from '../error-codes.js';
 import { buildFailure } from '../responses/api-response.js';
-import { getRequestId } from '../../infra/logger/index.js';
+import { getRequestId } from '../../context/index.js';
 
 interface NormalizedError {
   httpStatus: number;

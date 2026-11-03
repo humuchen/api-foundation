@@ -5,7 +5,7 @@
 
 NestJS 12.3.0 + Express + TypeScript 5.9 的通用后端接口底座：统一响应/错误码、参数校验、JWT 鉴权 + RBAC、结构化日志（requestId 全链路）、分页契约、审计、限流、安全加固、Swagger 文档、自动化测试（Vitest）。
 
-已库化为 pnpm 私有核心包 `@acme/foundation`（scope 按组织替换，见 `docs/core-package-architecture.md`）：业务项目 `pnpm add` 引入底座，本仓库 `apps/demo` 为最小宿主应用与 E2E 测试载体。
+已库化为 pnpm 私有核心包 `@humuchen/foundation`（scope 按组织替换，见 `docs/core-package-architecture.md`）：业务项目 `pnpm add` 引入底座，本仓库 `apps/demo` 为最小宿主应用与 E2E 测试载体。
 
 推送 `main` 后自动：CI 构建测试（含 E2E）→ API 文档（Swagger UI + `openapi.json`）发布至 GitHub Pages：https://humuchen.github.io/api-foundation/
 
@@ -57,27 +57,27 @@ apps/demo/                    # 最小宿主应用：main.ts + app.module.ts（�
 ## 作为核心包引入（业务项目视角）
 
 ```bash
-# 业务项目（.npmrc 配置 @acme 私源后）
-pnpm add @acme/foundation
+# 业务项
+pnpm add @humuchen/foundation
 ```
 
 ```ts
 // 业务 src/app.module.ts —— 底座一行装配，业务模块并列追加
-import { FoundationModule, AUDIT_SINK } from '@acme/foundation';
+import { FoundationModule, AUDIT_SINK } from '@humuchen/foundation';
 
 @Module({
   imports: [
     FoundationModule.forRoot({
-      config: { app: { port: 8080 } },                                // L1：配置覆盖
-      replacements: [{ provide: AUDIT_SINK, useClass: MyAuditSink }], // L2：DI 替换（同 Token last-wins）
+      config: { app: { port: 8080 } }, // L1：配置覆盖
+      replacements: [{ provide: AUDIT_SINK, useClass: MyAuditSink }] // L2：DI 替换（同 Token last-wins）
     }),
-    OrderModule,
-  ],
+    OrderModule
+  ]
 })
 export class AppModule {}
 
 // 业务 src/main.ts
-import { bootstrap } from '@acme/foundation';
+import { bootstrap } from '@humuchen/foundation';
 await bootstrap(AppModule); // 全局 Pipe/Guard/Filter/Interceptor、安全加固、前缀/版本化、Swagger 全部内置
 ```
 
@@ -87,21 +87,21 @@ await bootstrap(AppModule); // 全局 Pipe/Guard/Filter/Interceptor、安全加�
 
 ## API 一览（前缀 /api/v1）
 
-| 方法 | 路径 | 鉴权 | 说明 |
-|------|------|------|------|
-| POST | /auth/login | 公开 | 登录签发双凭证（限流 5 次/分钟）。内置账号：admin/admin123、ops/ops123456、demo/demo123456 |
-| POST | /auth/refresh | 公开 | refreshToken 换取新凭证对（限流 10 次/分钟；**一次性轮换**：旧 refresh 用后即吊销，重放 20001） |
-| POST | /auth/logout | 登录 | 登出：吊销当前 access 与可选 refreshToken（jti 黑名单至自然过期） |
-| GET  | /auth/profile | 登录 | 当前用户（@CurrentUser 示例） |
-| GET  | /users/me | 登录 | 我的信息 |
-| GET  | /users | admin | 分页查询（结果缓存 30s，写操作版本号失效；**按 X-Tenant-Id 行级隔离**） |
-| GET/POST/PATCH/DELETE | /users/:id | admin | 用户 CRUD（写操作带审计；POST 支持 Idempotency-Key 幂等重放；创建注入租户归属） |
-| GET  | /audit | admin | 最近审计记录（**持久化 audit_logs 表**，含租户上下文与脱敏入参） |
-| GET  | /hello | 登录 | 最小示例（v1） |
-| GET  | /hello/error | 登录 | BizException 演示（30000/HTTP 422） |
-| GET  | /api/v2/hello | 公开 | URI 版本化 v2 演示（与 v1 并行） |
-| GET  | /health | 公开 | 存活探针（liveness） |
-| GET  | /health/ready | 公开 | 就绪探针（readiness：SELECT 1 校验数据库，失败 50002） |
+| 方法                  | 路径          | 鉴权  | 说明                                                                                            |
+| --------------------- | ------------- | ----- | ----------------------------------------------------------------------------------------------- |
+| POST                  | /auth/login   | 公开  | 登录签发双凭证（限流 5 次/分钟）。内置账号：admin/admin123、ops/ops123456、demo/demo123456      |
+| POST                  | /auth/refresh | 公开  | refreshToken 换取新凭证对（限流 10 次/分钟；**一次性轮换**：旧 refresh 用后即吊销，重放 20001） |
+| POST                  | /auth/logout  | 登录  | 登出：吊销当前 access 与可选 refreshToken（jti 黑名单至自然过期）                               |
+| GET                   | /auth/profile | 登录  | 当前用户（@CurrentUser 示例）                                                                   |
+| GET                   | /users/me     | 登录  | 我的信息                                                                                        |
+| GET                   | /users        | admin | 分页查询（结果缓存 30s，写操作版本号失效；**按 X-Tenant-Id 行级隔离**）                         |
+| GET/POST/PATCH/DELETE | /users/:id    | admin | 用户 CRUD（写操作带审计；POST 支持 Idempotency-Key 幂等重放；创建注入租户归属）                 |
+| GET                   | /audit        | admin | 最近审计记录（**持久化 audit_logs 表**，含租户上下文与脱敏入参）                                |
+| GET                   | /hello        | 登录  | 最小示例（v1）                                                                                  |
+| GET                   | /hello/error  | 登录  | BizException 演示（30000/HTTP 422）                                                             |
+| GET                   | /api/v2/hello | 公开  | URI 版本化 v2 演示（与 v1 并行）                                                                |
+| GET                   | /health       | 公开  | 存活探针（liveness）                                                                            |
+| GET                   | /health/ready | 公开  | 就绪探针（readiness：SELECT 1 校验数据库，失败 50002）                                          |
 
 - Swagger：`http://localhost:3000/docs`（在线调试，右上角 Authorize 填入 token）
 - OpenAPI 导出：`npm run openapi:export` → `openapi.json`（供前端代码生成/网关导入）

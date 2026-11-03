@@ -1,0 +1,7 @@
+# pnpm 配置：放行 prisma 引擎下载与客户端生成
+allowBuilds:
+  '@prisma/client': true
+  '@prisma/engines': true
+  esbuild: true
+  prisma: true
+  '@scarf/scarf': false

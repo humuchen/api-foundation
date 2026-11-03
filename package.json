@@ -1,8 +1,11 @@
 {
-  "name": "@acme/foundation",
+  "name": "@humuchen/foundation",
   "version": "1.0.0",
   "description": "NestJS v12 通用后端接口底座核心包（统一响应/鉴权/审计/幂等/分页/缓存），apps/demo 为测试宿主",
   "type": "module",
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
@@ -33,12 +36,9 @@
     "./package.json": "./package.json"
   },
   "files": [
-    "dist"
+    "dist",
+    "prisma/fragments"
   ],
-  "publishConfig": {
-    "access": "restricted",
-    "registry": "https://registry.example.com/"
-  },
   "scripts": {
     "start": "node --import @swc-node/register/esm-register apps/demo/main.ts",
     "dev": "node --watch --import @swc-node/register/esm-register apps/demo/main.ts",
@@ -48,6 +48,7 @@
     "test:e2e": "vitest run test",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "depcruise": "depcruise src apps test --config .dependency-cruiser.cjs",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
@@ -56,7 +57,8 @@
     "openapi:export": "node --import @swc-node/register/esm-register scripts/export-openapi.ts",
     "changeset": "changeset",
     "changeset:version": "changeset version",
-    "changeset:publish": "changeset publish"
+    "changeset:publish": "changeset publish",
+    "create:biz-app": "node --import @swc-node/register/esm-register scripts/create-biz-app.ts"
   },
   "dependencies": {
     "@keyv/redis": "^6.1.0",
@@ -100,6 +102,7 @@
     "@types/node": "^22.20.5",
     "@types/passport-jwt": "^4.0.1",
     "@types/supertest": "^7.2.1",
+    "dependency-cruiser": "^18.7.1",
     "eslint": "^10.13.0",
     "globals": "^17.13.0",
     "ms": "^2.1.3",

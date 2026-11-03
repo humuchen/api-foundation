@@ -23,18 +23,18 @@
 ```
 核心包仓库 api-foundation ──CI(lint/test/build)──▶ Changesets Version PR ──合并──▶ publish
                                                                                     │
-业务项目 A/B/C ◀── pnpm add @acme/foundation@^1 ──── 私有 Registry（@acme scope）◀──┘
+业务项目 A/B/C ◀── pnpm add @humuchen/foundation@^1 ──── 私有 Registry（@humuchen scope）◀──┘
 ```
 
 **选型对比**
 
-| 维度 | 多仓 + 私有源（推荐） | pnpm monorepo |
-|------|----------------------|----------------|
-| 适用团队 | 跨团队、业务项目形态多样 | 同一团队、核心与业务高频共演 |
-| 版本边界 | 强制 semver，升级显式评审 | `workspace:*` 直连，边界易模糊 |
-| 仓库权限 | 按仓库粒度隔离 | 单仓粗粒度 |
-| CI 影响面 | 按仓库触发 | 全仓触发需调优 |
-| 改造成本 | 就地库化即可（当前已是独立仓） | 需新建聚合仓并迁移 |
+| 维度      | 多仓 + 私有源（推荐）          | pnpm monorepo                  |
+| --------- | ------------------------------ | ------------------------------ |
+| 适用团队  | 跨团队、业务项目形态多样       | 同一团队、核心与业务高频共演   |
+| 版本边界  | 强制 semver，升级显式评审      | `workspace:*` 直连，边界易模糊 |
+| 仓库权限  | 按仓库粒度隔离                 | 单仓粗粒度                     |
+| CI 影响面 | 按仓库触发                     | 全仓触发需调优                 |
+| 改造成本  | 就地库化即可（当前已是独立仓） | 需新建聚合仓并迁移             |
 
 **结论**：当前 `api-foundation` 已是独立仓库且具备 CI，最小改造路径即「就地库化 + 私有源发布」。团队规模小、核心与某一业务强共演时，可另建 monorepo 聚合仓，两者不互斥（monorepo 内同样可 `changeset publish` 到私有源）。
 
@@ -52,8 +52,8 @@
 // 核心包 src/index.ts 导出
 export declare function bootstrap(
   AppModule: Type<any>,
-  options?: FoundationBootstrapOptions,
-): Promise<INestApplication>;          // 内部完成全局 Pipe/Guard/Filter/Interceptor、helmet、Swagger、前缀与版本化装配
+  options?: FoundationBootstrapOptions
+): Promise<INestApplication>; // 内部完成全局 Pipe/Guard/Filter/Interceptor、helmet、Swagger、前缀与版本化装配
 
 export declare class FoundationModule {
   static forRoot(options?: FoundationOptions): DynamicModule;
@@ -62,28 +62,28 @@ export declare class FoundationModule {
 
 ```ts
 // 业务项目 src/app.module.ts
-import { FoundationModule, AUDIT_SINK } from '@acme/foundation';
+import { FoundationModule, AUDIT_SINK } from '@humuchen/foundation';
 
 @Module({
   imports: [
     FoundationModule.forRoot({
       config: { cache: { store: 'redis', redisUrl: process.env.REDIS_URL } },
-      replacements: [{ token: AUDIT_SINK, useClass: PgAuditSink }],
+      replacements: [{ token: AUDIT_SINK, useClass: PgAuditSink }]
     }),
-    OrderModule,           // 纯业务模块
-  ],
+    OrderModule // 纯业务模块
+  ]
 })
 export class AppModule {}
 
 // 业务项目 src/main.ts —— 只剩两行
-import { bootstrap } from '@acme/foundation';
+import { bootstrap } from '@humuchen/foundation';
 await bootstrap(AppModule);
 ```
 
 ### 3.2 目录结构与子路径导出
 
 ```
-api-foundation/                        # 包名：@acme/foundation（scope 占位，按组织替换）
+api-foundation/                        # 包名：@humuchen/foundation（scope 占位，按组织替换）
 ├── src/
 │   ├── index.ts                       # 根出口：bootstrap、FoundationModule、公共类型
 │   ├── factory/                       # bootstrap 工厂（全局组件装配）
@@ -102,15 +102,24 @@ api-foundation/                        # 包名：@acme/foundation（scope 占�
 
 ```jsonc
 {
-  "name": "@acme/foundation",
+  "name": "@humuchen/foundation",
   "version": "1.0.0",
   "type": "module",
   "files": ["dist"],
   "exports": {
-    ".":               { "types": "./dist/index.d.ts",            "import": "./dist/index.js" },
-    "./common":        { "types": "./dist/common/index.d.ts",     "import": "./dist/common/index.js" },
-    "./contracts":     { "types": "./dist/contracts/index.d.ts",  "import": "./dist/contracts/index.js" },
-    "./modules/user":  { "types": "./dist/modules/user/index.d.ts", "import": "./dist/modules/user/index.js" }
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
+    "./common": {
+      "types": "./dist/common/index.d.ts",
+      "import": "./dist/common/index.js"
+    },
+    "./contracts": {
+      "types": "./dist/contracts/index.d.ts",
+      "import": "./dist/contracts/index.js"
+    },
+    "./modules/user": {
+      "types": "./dist/modules/user/index.d.ts",
+      "import": "./dist/modules/user/index.js"
+    }
   },
   "peerDependencies": {
     "@nestjs/common": "^12.0.0",
@@ -118,7 +127,11 @@ api-foundation/                        # 包名：@acme/foundation（scope 占�
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2"
   },
-  "dependencies": { "pino": "^10.4.0", "bcryptjs": "^3.0.3", "@keyv/redis": "^6.1.0" },
+  "dependencies": {
+    "pino": "^10.4.0",
+    "bcryptjs": "^3.0.3",
+    "@keyv/redis": "^6.1.0"
+  },
   "publishConfig": { "registry": "https://registry.example.com/" }
 }
 ```
@@ -127,12 +140,12 @@ api-foundation/                        # 包名：@acme/foundation（scope 占�
 
 ### 3.3 依赖声明：peer 与 direct 的分界
 
-| 类别 | 依赖 | 声明方式 | 理由 |
-|------|------|----------|------|
-| 框架内核 | `@nestjs/common`、`@nestjs/core`、`rxjs`、`reflect-metadata` | **peerDependencies** | Nest DI 按 Token 同一性解析，装饰器元数据存于全局注册表；出现重复实例会导致注入失败与元数据丢失 |
-| Nest 子集成 | `@nestjs/jwt`、`@nestjs/config`、`@nestjs/throttler` 等 | dependencies | 自身只依赖框架内核 peer，pnpm 会按 range 去重 |
-| 纯工具库 | `pino`、`bcryptjs`、`@keyv/redis`、`class-validator` 等 | dependencies | 与 DI 实例同一性无关，由核心包锁定版本 |
-| 构建工具 | `@swc/*`、`typescript`、vitest | devDependencies | 随包不发布 |
+| 类别        | 依赖                                                         | 声明方式             | 理由                                                                                            |
+| ----------- | ------------------------------------------------------------ | -------------------- | ----------------------------------------------------------------------------------------------- |
+| 框架内核    | `@nestjs/common`、`@nestjs/core`、`rxjs`、`reflect-metadata` | **peerDependencies** | Nest DI 按 Token 同一性解析，装饰器元数据存于全局注册表；出现重复实例会导致注入失败与元数据丢失 |
+| Nest 子集成 | `@nestjs/jwt`、`@nestjs/config`、`@nestjs/throttler` 等      | dependencies         | 自身只依赖框架内核 peer，pnpm 会按 range 去重                                                   |
+| 纯工具库    | `pino`、`bcryptjs`、`@keyv/redis`、`class-validator` 等      | dependencies         | 与 DI 实例同一性无关，由核心包锁定版本                                                          |
+| 构建工具    | `@swc/*`、`typescript`、vitest                               | devDependencies      | 随包不发布                                                                                      |
 
 pnpm 严格隔离在此是红利：业务项目只能 import 自己声明过的依赖，核心包的内部依赖不会泄漏成幻影依赖。
 
@@ -149,11 +162,11 @@ pnpm 严格隔离在此是红利：业务项目只能 import 自己声明过的�
 
 ### 4.1 Semver 语义约定
 
-| 变更内容 | 级别 | 示例 |
-|----------|------|------|
+| 变更内容                                                                     | 级别      | 示例                                     |
+| ---------------------------------------------------------------------------- | --------- | ---------------------------------------- |
 | 统一响应结构、错误码数值/语义、`forRoot` 选项删除或必填化、peer 最低版本提升 | **MAJOR** | 错误码 20001 语义变更；`@Audit` 签名变更 |
-| 新增能力、新增 SPI 接口、新增可选 `forRoot` 选项、新增子路径导出 | **MINOR** | 新增 `@Idempotent`；新增事件类型 |
-| 缺陷修复、文档、内部实现优化（无契约变化） | **PATCH** | 修复分页排序白名单旁路 |
+| 新增能力、新增 SPI 接口、新增可选 `forRoot` 选项、新增子路径导出             | **MINOR** | 新增 `@Idempotent`；新增事件类型         |
+| 缺陷修复、文档、内部实现优化（无契约变化）                                   | **PATCH** | 修复分页排序白名单旁路                   |
 
 判据一句话：**业务项目不改一行代码升级后行为是否可能变化**——可能变化即 MAJOR。
 
@@ -174,16 +187,16 @@ CI（GitHub Actions）发布 job 骨架：`lint → test(单测+E2E) → build �
 
 ### 4.3 私有 Registry 选型
 
-| 方案 | 特点 | 适用 |
-|------|------|------|
-| Verdaccio（自建） | docker 一行起服，全功能私服，可配上游代理 | 有运维能力、需内网隔离 |
-| 云效/阿里云制品仓库 | 托管免运维、权限体系完善 | 国内团队首选托管方案 |
-| GitHub Packages | 与现有 CI 同生态，`GITHUB_TOKEN` 即凭证 | 已重度使用 GitHub |
+| 方案                | 特点                                      | 适用                   |
+| ------------------- | ----------------------------------------- | ---------------------- |
+| Verdaccio（自建）   | docker 一行起服，全功能私服，可配上游代理 | 有运维能力、需内网隔离 |
+| 云效/阿里云制品仓库 | 托管免运维、权限体系完善                  | 国内团队首选托管方案   |
+| GitHub Packages     | 与现有 CI 同生态，`GITHUB_TOKEN` 即凭证   | 已重度使用 GitHub      |
 
 业务项目 `.npmrc`：
 
 ```ini
-@acme:registry=https://registry.example.com/
+@humuchen:registry=https://registry.example.com/
 //registry.example.com/:_authToken=${NPM_TOKEN}
 always-auth=true
 ```
@@ -192,7 +205,7 @@ always-auth=true
 
 ### 4.4 预发布通道与回滚
 
-- `pnpm changeset pre enter beta` 进入预发布模式，发布 `1.3.0-beta.x`（`--tag beta`）；业务项目用 `pnpm add @acme/foundation@beta` 试点验证，稳定后退出 pre 模式发正式版。
+- `pnpm changeset pre enter beta` 进入预发布模式，发布 `1.3.0-beta.x`（`--tag beta`）；业务项目用 `pnpm add @humuchen/foundation@beta` 试点验证，稳定后退出 pre 模式发正式版。
 - **同版本号禁止重发**（私服同样关闭 republish）；问题版本用 `pnpm deprecate` 标记 + PATCH 修复。
 - 每次发布打 git tag（`v1.3.0`），tag 与 dist 产物一一对应，必要时可从 tag 复现构建。
 
@@ -200,21 +213,21 @@ always-auth=true
 
 ### 5.1 初始化接入（五步）
 
-1. 配置 `.npmrc`（见 4.3）→ 2. `pnpm add @acme/foundation @nestjs/common @nestjs/core reflect-metadata rxjs`（peer 需业务自装）→ 3. `AppModule` 引入 `FoundationModule.forRoot({...})` → 4. `main.ts` 换为 `bootstrap(AppModule)` → 5. 按 3.4 执行核心表迁移，跑通 `/health` 与 `/auth/login` 即接入完成。
+1. 配置 `.npmrc`（见 4.3）→ 2. `pnpm add @humuchen/foundation @nestjs/common @nestjs/core reflect-metadata rxjs`（peer 需业务自装）→ 3. `AppModule` 引入 `FoundationModule.forRoot({...})` → 4. `main.ts` 换为 `bootstrap(AppModule)` → 5. 按 3.4 执行核心表迁移，跑通 `/health` 与 `/auth/login` 即接入完成。
 
 ### 5.2 版本策略与升级流程
 
 - 依赖声明 `^1.2.0`，**lockfile 必须提交**——实际生效版本由 `pnpm-lock.yaml` 钉死，升级永远是显式 PR。
-- 升级四步：读 CHANGELOG（MAJOR 必读迁移指南）→ `pnpm up @acme/foundation@^1.3.0` → CI 跑契约校验（核心随包发布的 `openapi.json` 与业务 e2e 回归）→ 合并。
+- 升级四步：读 CHANGELOG（MAJOR 必读迁移指南）→ `pnpm up @humuchen/foundation@^1.3.0` → CI 跑契约校验（核心随包发布的 `openapi.json` 与业务 e2e 回归）→ 合并。
 - 节奏建议：跟随 MINOR/PATCH 月度例行升级；MAJOR 按需评估，核心包为每个 MAJOR 维护迁移文档（必要时提供 codemod）。
 
 ### 5.3 本地联调（核心改动即时看效果）
 
-| 方式 | 用法 | 优点 | 局限 |
-|------|------|------|------|
-| `pnpm.overrides` + `link:` | 业务仓 package.json：`"pnpm": { "overrides": { "@acme/foundation": "link:../api-foundation" } }` | 零发布、改完 build 即生效 | 需先构建核心；建议联调分支临时提交，合回前移除 |
-| yalc | 核心 `yalc publish` → 业务 `yalc add @acme/foundation` | 接近真实安装产物 | 多一步工具链 |
-| Verdaccio 本地源 / beta dist-tag | 核心 `pnpm publish --tag beta` → 业务 `pnpm up @acme/foundation@beta` | 全链路最真实，验证的就是发布产物本身 | 需维护本地 registry 或走远端 beta |
+| 方式                             | 用法                                                                                                 | 优点                                 | 局限                                           |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------ | ---------------------------------------------- |
+| `pnpm.overrides` + `link:`       | 业务仓 package.json：`"pnpm": { "overrides": { "@humuchen/foundation": "link:../api-foundation" } }` | 零发布、改完 build 即生效            | 需先构建核心；建议联调分支临时提交，合回前移除 |
+| yalc                             | 核心 `yalc publish` → 业务 `yalc add @humuchen/foundation`                                           | 接近真实安装产物                     | 多一步工具链                                   |
+| Verdaccio 本地源 / beta dist-tag | 核心 `pnpm publish --tag beta` → 业务 `pnpm up @humuchen/foundation@beta`                            | 全链路最真实，验证的就是发布产物本身 | 需维护本地 registry 或走远端 beta              |
 
 推荐组合：日常调试用 `link:`，联调回归与发布前验证用 beta 通道——保证「调试方便」与「装到的就是发布的」两个诉求都覆盖。
 
@@ -223,25 +236,27 @@ always-auth=true
 ### 6.1 依赖方向与防腐化
 
 - **单向依赖**：业务 → 核心。核心仓库 CI 用 dependency-cruiser（或 eslint-plugin-boundaries）静态校验「src 不得引用任何外部业务包」，违规即红灯。
-- **物理封边**：`exports` 字段使 `@acme/foundation/infra/...` 等内部路径无法 deep-import。
+- **物理封边**：`exports` 字段使 `@humuchen/foundation/infra/...` 等内部路径无法 deep-import。
 - **版本对齐**：框架 peer 由业务单实例持有；若业务传递引入多版本 Nest，用 pnpm `overrides` 强制收敛到单一版本。
 
 ### 6.2 五层扩展机制（由轻到重）
 
-| 层 | 机制 | 业务写什么 | 核心提供什么 |
-|----|------|-----------|--------------|
-| L1 | 配置 | `forRoot({ config })` 覆盖缓存/限流/审计参数 | 类型化选项 + env 启动校验 |
-| L2 | DI 替换 | `replacements: [{ token: AUDIT_SINK, useClass: MySink }]` | `contracts/` 中 Token + 接口 |
-| L3 | 事件订阅 | `@OnEvent('user.changed')` 旁路响应 | 进程内事件总线与事件契约 |
-| L4 | 装饰器组合 | `@Public()` / `@Roles()` / `@Audit()` / `@Idempotent()` | 端点级行为开关 |
-| L5 | 回馈核心 | 需求普适时提 feature PR | RFC 评审 + feature flag 灰度 |
+| 层  | 机制       | 业务写什么                                                | 核心提供什么                 |
+| --- | ---------- | --------------------------------------------------------- | ---------------------------- |
+| L1  | 配置       | `forRoot({ config })` 覆盖缓存/限流/审计参数              | 类型化选项 + env 启动校验    |
+| L2  | DI 替换    | `replacements: [{ token: AUDIT_SINK, useClass: MySink }]` | `contracts/` 中 Token + 接口 |
+| L3  | 事件订阅   | `@OnEvent('user.changed')` 旁路响应                       | 进程内事件总线与事件契约     |
+| L4  | 装饰器组合 | `@Public()` / `@Roles()` / `@Audit()` / `@Idempotent()`   | 端点级行为开关               |
+| L5  | 回馈核心   | 需求普适时提 feature PR                                   | RFC 评审 + feature flag 灰度 |
 
 SPI 契约示例：
 
 ```ts
 // 核心 src/contracts/audit-sink.ts
 export const AUDIT_SINK = Symbol('AUDIT_SINK');
-export interface AuditSink { record(entry: AuditEntry): Promise<void>; }
+export interface AuditSink {
+  record(entry: AuditEntry): Promise<void>;
+}
 // 核心默认实现绑定该 Token；业务经 replacements 整体换实现，核心其余逻辑零改动
 ```
 
@@ -257,9 +272,9 @@ Node ≥ 22 LTS ｜ NestJS 12.x（peer `^12.0.0`）｜ Prisma 6.x ｜ pnpm ≥ 1
 
 ## 7. 落地路线
 
-| 阶段 | 内容 | 产出 | 状态 |
-|------|------|------|------|
-| P1 就地库化 | `src/` 转纯库、demo 宿主迁移、exports/peer/changesets 配置 | 核心包 1.0.0，`apps/demo` e2e 全绿（33 测试） | ✅ 完成 |
-| P2 私有源与首版 | Registry 就绪、CI 发布流水线、发布 1.0.0 并打 tag | release.yml（registry/token 占位待填）；Verdaccio 本地冒烟发布 1.0.0 验证通过 | ✅ 流水线就绪，正式私源待配置 |
-| P3 业务试点 | 第一个业务项目接入，按反馈打磨 SPI 与文档 | `../foundation-trial`：私服安装 → tsc 类型检查 → L1 端口覆盖 + L2 审计替换 → 真实启动全通过 | ✅ 完成 |
-| P4 治理与规模化 | 业务脚手架模板（create-biz-app）、兼容性矩阵自动化检查、依赖看板 | 新业务半天内完成接入 | ⏳ 待启动 |
+| 阶段            | 内容                                                             | 产出                                                                                        | 状态                          |
+| --------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ----------------------------- |
+| P1 就地库化     | `src/` 转纯库、demo 宿主迁移、exports/peer/changesets 配置       | 核心包 1.0.0，`apps/demo` e2e 全绿（33 测试）                                               | ✅ 完成                       |
+| P2 私有源与首版 | Registry 就绪、CI 发布流水线、发布 1.0.0 并打 tag                | release.yml（registry/token 占位待填）；Verdaccio 本地冒烟发布 1.0.0 验证通过               | ✅ 流水线就绪，正式私源待配置 |
+| P3 业务试点     | 第一个业务项目接入，按反馈打磨 SPI 与文档                        | `../foundation-trial`：私服安装 → tsc 类型检查 → L1 端口覆盖 + L2 审计替换 → 真实启动全通过 | ✅ 完成                       |
+| P4 治理与规模化 | 业务脚手架模板（create-biz-app）、兼容性矩阵自动化检查、依赖看板 | 新业务半天内完成接入                                                                        | ⏳ 待启动                     |

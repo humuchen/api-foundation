@@ -1,0 +1,19 @@
+// 业务数据模型写在本文件；核心包表（users/audit_logs）在同目录 foundation.prisma
+// （由 create-biz-app 自动复制，随核心包升级需同步更新）。
+// 目录模式：prisma 目录下所有 .prisma 文件自动合并，datasource/generator 全项目仅此一处。
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// 示例业务模型（可删除）
+model Order {
+  id        String   @id @default(uuid())
+  title     String
+  amount    Int
+  createdAt DateTime @default(now())
+}

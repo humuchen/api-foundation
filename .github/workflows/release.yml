@@ -41,7 +41,7 @@ jobs:
           node-version: 22
           cache: pnpm
           registry-url: https://registry.example.com/
-          scope: '@acme'
+          scope: '@humuchen'
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -52,15 +52,15 @@ jobs:
 
       - name: Configure registry auth
         run: |
-          echo "@acme:registry=${REGISTRY_URL}" >> ~/.npmrc
+          echo "@humuchen:registry=${REGISTRY_URL}" >> ~/.npmrc
           echo "//registry.example.com/:_authToken=${NPM_TOKEN}" >> ~/.npmrc
 
       - uses: changesets/action@v1
         with:
           version: pnpm changeset:version
           publish: pnpm changeset:publish
-          commit: "chore(release): version packages"
-          title: "chore(release): version packages"
+          commit: 'chore(release): version packages'
+          title: 'chore(release): version packages'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
