@@ -42,7 +42,7 @@
   "scripts": {
     "start": "node --import @swc-node/register/esm-register apps/demo/main.ts",
     "dev": "node --watch --import @swc-node/register/esm-register apps/demo/main.ts",
-    "build": "tsc -p tsconfig.build.json && tsc -p tsconfig.demo.json",
+    "build": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true});require('fs').rmSync('dist-demo',{recursive:true,force:true})\" && tsc -p tsconfig.build.json && tsc -p tsconfig.demo.json",
     "prod": "node dist-demo/apps/demo/main.js",
     "test": "vitest run",
     "test:e2e": "vitest run test",
