@@ -16,7 +16,7 @@ import globals from 'globals';
  */
 export default tseslint.config(
   {
-    ignores: ['dist/**', 'coverage/**', 'node_modules/**', 'prisma/**', '**/*.tsbuildinfo'],
+    ignores: ['dist/**', 'dist-demo/**', 'coverage/**', 'node_modules/**', 'prisma/**', '**/*.tsbuildinfo'],
   },
 
   // ── 1. 基线层 ────────────────────────────────────────────────
@@ -65,7 +65,7 @@ export default tseslint.config(
 
   // ── 4. ★ 底座强制层（横切契约代码，最高标准） ─────────────────
   {
-    files: ['src/common/**/*.ts', 'src/infra/**/*.ts'],
+    files: ['src/common/**/*.ts', 'src/infra/**/*.ts', 'src/contracts/**/*.ts', 'src/factory/**/*.ts'],
     rules: {
       // 底座函数签名即契约：返回类型必须显式（表达式内联场景豁免）
       '@typescript-eslint/explicit-function-return-type': [
