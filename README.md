@@ -5,13 +5,13 @@
 
 NestJS 12.3.0 + Express + TypeScript 5.9 的通用后端接口底座：统一响应/错误码、参数校验、JWT 鉴权 + RBAC、结构化日志（requestId 全链路）、分页契约、审计、限流、安全加固、Swagger 文档、自动化测试（Vitest）。
 
-已库化为 pnpm 私有核心包 `@humuchen/foundation`（scope 按组织替换，见 `docs/core-package-architecture.md`）：业务项目 `pnpm add` 引入底座，本仓库 `apps/demo` 为最小宿主应用与 E2E 测试载体。
+已库化为 pnpm 私有核心包 `@humuchen/foundation`：业务项目 `pnpm add` 或脚手架（`pnpm create:biz-app`）引入底座，本仓库 `apps/demo` 为最小宿主应用与 E2E 测试载体。架构、版本发布与扩展机制详见 `docs/core-package-architecture.md`。
 
 推送 `main` 后自动：CI 构建测试（含 E2E）→ API 文档（Swagger UI + `openapi.json`）发布至 GitHub Pages：https://humuchen.github.io/api-foundation/
 
 ## 运行
 
-包管理器：**pnpm ≥ 10**（锁文件 `pnpm-lock.yaml`；构建脚本白名单见 `pnpm-workspace.yaml` 的 `allowBuilds`）。
+运行环境：**Node ≥ 22**（`package.json` engines + `.npmrc engine-strict` 强制）、包管理器 **pnpm ≥ 10**（锁文件 `pnpm-lock.yaml`；构建脚本白名单见 `pnpm-workspace.yaml` 的 `allowBuilds`）。
 
 模块体系：**原生 ESM**（`"type": "module"` + tsconfig NodeNext，相对导入显式 `.js` 扩展名）。dev/start/openapi 经 `@swc-node/register/esm-register` 运行 TS（SWC 转译，支持 `emitDecoratorMetadata`）；Vitest 原生 ESM 直连；生产产物 `dist/` 由 Node 直接执行，无需任何 loader。纯 CJS 依赖（如 jsonwebtoken）具名导出无法被 Node 静态探测的，统一采用「默认导入 + 解构」（见 jwt-auth.guard）。
 
@@ -27,6 +27,9 @@ pnpm run db:generate # Prisma 客户端生成（schema 变更后；pnpm 布局�
 pnpm run db:generate:pg # PostgreSQL 变体生成（--schema prisma/schema.postgres.prisma）
 pnpm run db:migrate:pg  # PostgreSQL 迁移（配合 docker-compose.yml 本地实例）
 pnpm run openapi:export # 导出 openapi.json（前端代码生成/网关导入）
+pnpm run depcruise      # 依赖方向防腐校验（contracts/common/infra 分层单向，违规即失败）
+pnpm run create:biz-app ../new-service --name @yourorg/new-service --port 3100
+                        # 业务项目脚手架：生成可运行的底座接入工程（含 L1/L2 扩展示例）
 ```
 
 > 迁移自 npm：`node_modules` 与 `package-lock.json` 已移除；pnpm 严格布局下曾暴露两个幻影依赖（`ms`、`jsonwebtoken`）并已补为直接依赖。
@@ -43,21 +46,38 @@ src/
 ├── factory/                  # 底座装配：bootstrap 启动工厂 + FoundationModule.forRoot（全局 Provider 组合根）
 ├── config/                   # 配置加载 + env 启动期校验（fail-fast）、http-hardening、openapi
 ├── common/                   # 横切底座：错误码、BizException、统一响应、分页、守卫、装饰器
-├── contracts/                # SPI 契约：扩展点 DI Token + 接口（如 AUDIT_SINK）
-├── infra/                    # 框架集成：logger（pino+requestId）、auth（JWT）、audit（默认 Prisma Sink）、database、idempotency
+├── context/                  # 请求上下文原语（AsyncLocalStorage）：common 与 infra 的共同底层
+├── contracts/                # SPI 契约：扩展点 DI Token + 接口（如 AUDIT_SINK、AuthUser）
+├── infra/                    # 框架集成：logger（pino）、auth（JWT）、audit（默认 Prisma Sink）、database、idempotency
 ├── modules/                  # 参考实现：hello（最小示例）、user（CRUD+分页+RBAC 参考）
 └── health/                   # 存活探针
 apps/demo/                    # 最小宿主应用：main.ts + app.module.ts（业务项目样板，E2E 载体）
+templates/biz-app/            # 业务项目脚手架模板（pnpm create:biz-app 消费）
+prisma/fragments/             # 核心 schema 片段（随包发布，业务侧目录模式合并）
 ```
 
-依赖方向：`apps/demo / 业务模块 → factory / common / contracts / infra`；核心包不依赖任何业务仓库。
+依赖方向（dependency-cruiser 强制）：`apps/demo / 业务模块 → factory / common / contracts / infra / context`；核心包不依赖任何业务仓库。
 底座能力全部经 `FoundationModule.forRoot` 内的
 `APP_PIPE / APP_GUARD / APP_FILTER / APP_INTERCEPTOR` 全局注册，业务代码零侵入。
 
 ## 作为核心包引入（业务项目视角）
 
+**方式一：脚手架（推荐，分钟级接入）**
+
 ```bash
-# 业务项
+# 在核心包仓库执行；--registry 指向实际私源（省略则生成占位 .npmrc）
+pnpm create:biz-app ../order-service --name @yourorg/order-service --port 3100 \
+  --registry https://your-registry.example.com/
+```
+
+生成内容：底座装配样板（`FoundationModule.forRoot` + L1 配置覆盖 / L2 审计替换示例）、tsconfig、
+Prisma 目录模式 schema（核心片段 `foundation.prisma` 自动复制）、`.env` 与私源 `.npmrc`。
+生成后 `pnpm install → prisma generate && prisma db push → build && start` 即得可运行服务。
+
+**方式二：既有项目手工接入**
+
+```bash
+# 业务项目（.npmrc 配置私源后）
 pnpm add @humuchen/foundation
 ```
 
@@ -83,6 +103,8 @@ await bootstrap(AppModule); // 全局 Pipe/Guard/Filter/Interceptor、安全加�
 
 - 子路径导出：`.`（根）、`./common`、`./contracts`、`./health`、`./modules/hello`、`./modules/user`
 - peer 依赖：`@nestjs/common`、`@nestjs/core`、`reflect-metadata`、`rxjs`（业务自装，保证 DI 单实例）
+- 核心表结构随包发布：`node_modules/@humuchen/foundation/prisma/fragments/foundation.prisma`，复制进业务 `prisma/` 目录（目录模式多文件自动合并，随核心升级同步更新）
+- 发版：Changesets 流水线（特性 PR 附 changeset → Version PR → 自动 publish 并打 tag），见 `.github/workflows/release.yml`
 - 版本策略与升级流程、本地联调（`pnpm.overrides` + `link:` / yalc / beta dist-tag）：见 `docs/core-package-architecture.md`
 
 ## API 一览（前缀 /api/v1）
@@ -104,7 +126,7 @@ await bootstrap(AppModule); // 全局 Pipe/Guard/Filter/Interceptor、安全加�
 | GET                   | /health/ready | 公开  | 就绪探针（readiness：SELECT 1 校验数据库，失败 50002）                                          |
 
 - Swagger：`http://localhost:3000/docs`（在线调试，右上角 Authorize 填入 token）
-- OpenAPI 导出：`npm run openapi:export` → `openapi.json`（供前端代码生成/网关导入）
+- OpenAPI 导出：`pnpm run openapi:export` → `openapi.json`（供前端代码生成/网关导入）
 
 ## 契约要点
 
@@ -116,7 +138,7 @@ await bootstrap(AppModule); // 全局 Pipe/Guard/Filter/Interceptor、安全加�
 - **审计**：`@Audit('user:create', { includeBody: true })` 标注写操作；异步记录、敏感字段（password/token/secret）强制脱敏；`GET /audit`（admin）查询。
 - **限流**：全局 100 次/分钟/IP（429 → 50003）；登录端点收紧至 5 次/分钟。
 - **安全加固**：helmet 安全响应头（开发环境关闭 CSP 以保 Swagger）、请求体 ≤256KB（413 → 10002）、CORS 白名单（生产未配置 `CORS_ORIGINS` 则拒绝跨域）。
-- **测试**：Vitest + SWC（`@nestjs/common` 12 为 ESM-only，Jest 不适用）；12 个单测（分页转换/响应构造/异常映射）+ 18 个 E2E 按域拆分（auth：双凭证/轮换/登出黑名单；users：RBAC/分页/幂等/租户隔离；foundation：探针/审计脱敏/兜底），走真实 SQLite，文件级串行。
+- **测试**：Vitest + SWC（`@nestjs/common` 12 为 ESM-only，Jest 不适用）；15 个单测（分页转换/响应构造/异常映射、FoundationModule 装配契约——L1 配置覆盖与 L2 替换 last-wins）+ 18 个 E2E 按域拆分（auth：双凭证/轮换/登出黑名单；users：RBAC/分页/幂等/租户隔离；foundation：探针/审计脱敏/兜底），走真实 SQLite，文件级串行；另有 dependency-cruiser 依赖防腐校验纳入 CI。
 - **类型安全**：tsconfig `strict: true` 全量开启（src + test + 配置文件），构建经 `tsconfig.build.json` 仅产出业务代码。
 - **缓存**：@nestjs/cache-manager（默认内存/Keyv）；`CACHE_STORE=redis` + `REDIS_URL` 一键外置（缓存/幂等/凭证黑名单共享同一 Cache 实例，业务零改动）；分页结果按查询指纹缓存，**缓存键含租户段**，版本号递增实现批量失效（Keyv 无前缀扫描）。
 - **幂等**：`@Idempotent()` 端点支持 Idempotency-Key——重放返回首次结果（`X-Idempotent-Replayed: true`）、在途请求合并、失败不入缓存可重试、TTL 24h；存储随 CACHE_STORE 外置。
