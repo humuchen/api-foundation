@@ -5,7 +5,7 @@ import { expect } from 'vitest';
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import { AppModule } from '../src/app.module.js';
+import { AppModule } from '../apps/demo/app.module.js';
 import { configureApiBase } from '../src/config/api-base.js';
 import { requestContextMiddleware } from '../src/infra/logger/index.js';
 import type { LoginResult } from '../src/infra/auth/auth.types.js';

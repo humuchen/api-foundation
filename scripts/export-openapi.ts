@@ -3,7 +3,7 @@ process.env.LOG_LEVEL = 'silent';
 import 'reflect-metadata';
 import { writeFileSync } from 'node:fs';
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from '../src/app.module.js';
+import { AppModule } from '../apps/demo/app.module.js';
 import { configureApiBase } from '../src/config/api-base.js';
 import { buildOpenapiDocument } from '../src/config/openapi.js';
 

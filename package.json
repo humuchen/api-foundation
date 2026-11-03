@@ -1,14 +1,49 @@
 {
-  "name": "api-foundation",
+  "name": "@acme/foundation",
   "version": "1.0.0",
-  "description": "NestJS v12 通用后端接口底座（统一响应/鉴权/审计/幂等/分页/缓存）",
+  "description": "NestJS v12 通用后端接口底座核心包（统一响应/鉴权/审计/幂等/分页/缓存），apps/demo 为测试宿主",
   "type": "module",
-  "main": "dist/main.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./common": {
+      "types": "./dist/common/index.d.ts",
+      "import": "./dist/common/index.js"
+    },
+    "./contracts": {
+      "types": "./dist/contracts/index.d.ts",
+      "import": "./dist/contracts/index.js"
+    },
+    "./health": {
+      "types": "./dist/health/index.d.ts",
+      "import": "./dist/health/index.js"
+    },
+    "./modules/hello": {
+      "types": "./dist/modules/hello/index.d.ts",
+      "import": "./dist/modules/hello/index.js"
+    },
+    "./modules/user": {
+      "types": "./dist/modules/user/index.d.ts",
+      "import": "./dist/modules/user/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "restricted",
+    "registry": "https://registry.example.com/"
+  },
   "scripts": {
-    "start": "node --import @swc-node/register/esm-register src/main.ts",
-    "dev": "node --watch --import @swc-node/register/esm-register src/main.ts",
-    "build": "tsc -p tsconfig.build.json",
-    "prod": "node dist/main.js",
+    "start": "node --import @swc-node/register/esm-register apps/demo/main.ts",
+    "dev": "node --watch --import @swc-node/register/esm-register apps/demo/main.ts",
+    "build": "tsc -p tsconfig.build.json && tsc -p tsconfig.demo.json",
+    "prod": "node dist-demo/apps/demo/main.js",
     "test": "vitest run",
     "test:e2e": "vitest run test",
     "lint": "eslint .",
@@ -18,14 +53,15 @@
     "db:push": "prisma db push",
     "db:generate:pg": "prisma generate --schema prisma/schema.postgres.prisma",
     "db:migrate:pg": "prisma migrate dev --schema prisma/schema.postgres.prisma",
-    "openapi:export": "node --import @swc-node/register/esm-register scripts/export-openapi.ts"
+    "openapi:export": "node --import @swc-node/register/esm-register scripts/export-openapi.ts",
+    "changeset": "changeset",
+    "changeset:version": "changeset version",
+    "changeset:publish": "changeset publish"
   },
   "dependencies": {
     "@keyv/redis": "^6.1.0",
     "@nestjs/cache-manager": "^12.0.2",
-    "@nestjs/common": "12.3.0",
     "@nestjs/config": "^12.0.1",
-    "@nestjs/core": "12.3.0",
     "@nestjs/event-emitter": "^12.0.1",
     "@nestjs/jwt": "^12.0.3",
     "@nestjs/passport": "^12.0.0",
@@ -42,12 +78,19 @@
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "pino": "^10.4.0",
-    "prisma": "^6.19.3",
+    "prisma": "^6.19.3"
+  },
+  "peerDependencies": {
+    "@nestjs/common": "^12.0.0",
+    "@nestjs/core": "^12.0.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2"
   },
   "devDependencies": {
+    "@changesets/cli": "^3.0.3",
     "@eslint/js": "^10.0.1",
+    "@nestjs/common": "12.3.0",
+    "@nestjs/core": "12.3.0",
     "@nestjs/testing": "^12.3.2",
     "@swc-node/register": "^1.12.1",
     "@swc/core": "^1.16.20",
@@ -61,6 +104,8 @@
     "globals": "^17.13.0",
     "ms": "^2.1.3",
     "pino-pretty": "^13.2.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
     "supertest": "^7.3.1",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.72.1",

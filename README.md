@@ -5,6 +5,8 @@
 
 NestJS 12.3.0 + Express + TypeScript 5.9 的通用后端接口底座：统一响应/错误码、参数校验、JWT 鉴权 + RBAC、结构化日志（requestId 全链路）、分页契约、审计、限流、安全加固、Swagger 文档、自动化测试（Vitest）。
 
+已库化为 pnpm 私有核心包 `@acme/foundation`（scope 按组织替换，见 `docs/core-package-architecture.md`）：业务项目 `pnpm add` 引入底座，本仓库 `apps/demo` 为最小宿主应用与 E2E 测试载体。
+
 推送 `main` 后自动：CI 构建测试（含 E2E）→ API 文档（Swagger UI + `openapi.json`）发布至 GitHub Pages：https://humuchen.github.io/api-foundation/
 
 ## 运行
@@ -15,9 +17,9 @@ NestJS 12.3.0 + Express + TypeScript 5.9 的通用后端接口底座：统一响
 
 ```bash
 pnpm install
-pnpm run dev        # 开发（node --watch + @swc-node/register，pino-pretty 美化输出）
-pnpm run build      # 编译到 dist/（tsconfig.build.json，严格模式）
-pnpm run prod       # 生产运行（读取 dist/）
+pnpm run dev        # 开发（apps/demo 宿主：node --watch + @swc-node/register，pino-pretty 美化输出）
+pnpm run build      # 构建：库产物 dist/（js + d.ts，exports 子路径）+ demo 产物 dist-demo/
+pnpm run prod       # 生产运行（读取 dist-demo/apps/demo/main.js）
 pnpm test           # 全部测试（单元 + E2E，Vitest + SWC）
 pnpm run test:e2e   # 仅 E2E
 pnpm run db:migrate # Prisma 迁移（首次部署执行；dev.db 自动创建）
@@ -37,16 +39,51 @@ PostgreSQL 切换：双 schema 并行维护（`schema.prisma` 开发态 / `schem
 
 ```
 src/
-├── main.ts / app.module.ts   # bootstrap 与全局 Provider 注册（Pipe/Guard/Filter/Interceptor）
-├── config/                   # 配置加载 + env 启动期校验（fail-fast）
+├── index.ts                  # 根出口：bootstrap / FoundationModule / common / contracts
+├── factory/                  # 底座装配：bootstrap 启动工厂 + FoundationModule.forRoot（全局 Provider 组合根）
+├── config/                   # 配置加载 + env 启动期校验（fail-fast）、http-hardening、openapi
 ├── common/                   # 横切底座：错误码、BizException、统一响应、分页、守卫、装饰器
-├── infra/                    # 框架集成：logger（pino+requestId）、auth（JWT 策略/登录）
-├── modules/                  # 业务模块：hello（最小示例）、user（CRUD+分页+RBAC 参考实现）
+├── contracts/                # SPI 契约：扩展点 DI Token + 接口（如 AUDIT_SINK）
+├── infra/                    # 框架集成：logger（pino+requestId）、auth（JWT）、audit（默认 Prisma Sink）、database、idempotency
+├── modules/                  # 参考实现：hello（最小示例）、user（CRUD+分页+RBAC 参考）
 └── health/                   # 存活探针
+apps/demo/                    # 最小宿主应用：main.ts + app.module.ts（业务项目样板，E2E 载体）
 ```
 
-依赖方向：`modules → common / infra`；`common` 不依赖任何业务模块。底座能力全部经
+依赖方向：`apps/demo / 业务模块 → factory / common / contracts / infra`；核心包不依赖任何业务仓库。
+底座能力全部经 `FoundationModule.forRoot` 内的
 `APP_PIPE / APP_GUARD / APP_FILTER / APP_INTERCEPTOR` 全局注册，业务代码零侵入。
+
+## 作为核心包引入（业务项目视角）
+
+```bash
+# 业务项目（.npmrc 配置 @acme 私源后）
+pnpm add @acme/foundation
+```
+
+```ts
+// 业务 src/app.module.ts —— 底座一行装配，业务模块并列追加
+import { FoundationModule, AUDIT_SINK } from '@acme/foundation';
+
+@Module({
+  imports: [
+    FoundationModule.forRoot({
+      config: { app: { port: 8080 } },                                // L1：配置覆盖
+      replacements: [{ provide: AUDIT_SINK, useClass: MyAuditSink }], // L2：DI 替换（同 Token last-wins）
+    }),
+    OrderModule,
+  ],
+})
+export class AppModule {}
+
+// 业务 src/main.ts
+import { bootstrap } from '@acme/foundation';
+await bootstrap(AppModule); // 全局 Pipe/Guard/Filter/Interceptor、安全加固、前缀/版本化、Swagger 全部内置
+```
+
+- 子路径导出：`.`（根）、`./common`、`./contracts`、`./health`、`./modules/hello`、`./modules/user`
+- peer 依赖：`@nestjs/common`、`@nestjs/core`、`reflect-metadata`、`rxjs`（业务自装，保证 DI 单实例）
+- 版本策略与升级流程、本地联调（`pnpm.overrides` + `link:` / yalc / beta dist-tag）：见 `docs/core-package-architecture.md`
 
 ## API 一览（前缀 /api/v1）
 
@@ -90,4 +127,4 @@ src/
 - **版本化**：全局前缀 `api` + URI 版本化（默认 v1），新版本以 `@Controller({ version: '2' })` 并行发布。
 - **租户上下文**：X-Tenant-Id（白名单字符校验）经 ALS 贯通日志与审计；**行级隔离参考实现**：列表按租户过滤（平台级 tenantId=null 账号对租户视角隐藏）、创建注入租户归属；详情/自我查询/登录不隔离（平台管理需要）。
 
-规划详情见 `docs/api-foundation-plan.md`。
+规划详情见 `docs/api-foundation-plan.md`；核心包架构、版本发布与扩展机制见 `docs/core-package-architecture.md`。
