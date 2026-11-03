@@ -277,4 +277,4 @@ Node ≥ 22 LTS ｜ NestJS 12.x（peer `^12.0.0`）｜ Prisma 6.x ｜ pnpm ≥ 1
 | P1 就地库化     | `src/` 转纯库、demo 宿主迁移、exports/peer/changesets 配置       | 核心包 1.0.0，`apps/demo` e2e 全绿（33 测试）                                               | ✅ 完成                       |
 | P2 私有源与首版 | Registry 就绪、CI 发布流水线、发布 1.0.0 并打 tag                | release.yml（registry/token 占位待填）；Verdaccio 本地冒烟发布 1.0.0 验证通过               | ✅ 流水线就绪，正式私源待配置 |
 | P3 业务试点     | 第一个业务项目接入，按反馈打磨 SPI 与文档                        | `../foundation-trial`：私服安装 → tsc 类型检查 → L1 端口覆盖 + L2 审计替换 → 真实启动全通过 | ✅ 完成                       |
-| P4 治理与规模化 | 业务脚手架模板（create-biz-app）、兼容性矩阵自动化检查、依赖看板 | 新业务半天内完成接入                                                                        | ⏳ 待启动                     |
+| P4 治理与规模化 | 业务脚手架模板（create-biz-app）、兼容性矩阵自动化检查、依赖看板 | `pnpm create:biz-app` 脚手架端到端验证通过；dependency-cruiser 防腐校验接入 CI；engines(node>=22)+engine-strict；prisma 片段随包发布 | ✅ 完成                       |
