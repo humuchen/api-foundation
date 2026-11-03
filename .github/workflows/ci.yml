@@ -40,6 +40,10 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      # 依赖方向防腐（架构文档 §6.1）：contracts/common/infra 分层单向依赖
+      - name: Enforce dependency rules
+        run: pnpm depcruise
+
       - name: Build
         run: pnpm build
 

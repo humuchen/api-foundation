@@ -1,5 +1,4 @@
-import { cpSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { cpSync, existsSync, readFileSync, writeFileSync } from 'node:fs';import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 /**
@@ -74,6 +73,11 @@ function main(): void {
     join(repoRoot, 'prisma', 'fragments', 'foundation.prisma'),
     join(targetDir, 'prisma', 'foundation.prisma'),
   );
+
+  // .env 由 .env.example 生成（模板的 .env 被 gitignore，不入库）
+  if (!existsSync(join(targetDir, '.env'))) {
+    cpSync(join(repoRoot, 'templates', 'biz-app', '.env.example'), join(targetDir, '.env'));
+  }
 
   console.log(`\n✓ 业务项目已生成: ${targetDir}（包名 ${pkgName}，端口 ${port}）`);
   console.log('后续步骤:');
