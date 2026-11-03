@@ -1,0 +1,66 @@
+name: Release
+
+# 发版流水线（见 docs/core-package-architecture.md §4）：
+#  - push 到 main：changesets action 检测 .changeset/*.md
+#    - 有待发版变更 → 自动创建/更新 Version PR（聚合版本号 + CHANGELOG）
+#    - Version PR 被合并 → 同一 action 执行 publish，发布到私有源并打 git tag / GitHub Release
+#
+# 首次启用前配置（占位待填）：
+#  1. 仓库 secrets 新增 NPM_TOKEN（私有源 publish 令牌）
+#  2. 将本文件与 setup-node registry-url 中的 https://registry.example.com/ 替换为实际私源
+#     （Verdaccio 自建 / 云效制品仓库 / GitHub Packages，三选一）
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release:
+    name: Version & Publish
+    runs-on: ubuntu-latest
+    env:
+      REGISTRY_URL: https://registry.example.com/
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: https://registry.example.com/
+          scope: '@humuchen'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # pnpm 布局下 postinstall 不保证完整生成 Prisma Client，显式生成（与 ci.yml 一致）
+      - name: Generate Prisma Client
+        run: pnpm exec prisma generate
+
+      - name: Configure registry auth
+        run: |
+          echo "@humuchen:registry=${REGISTRY_URL}" >> ~/.npmrc
+          echo "//registry.example.com/:_authToken=${NPM_TOKEN}" >> ~/.npmrc
+
+      - uses: changesets/action@v1
+        with:
+          version: pnpm changeset:version
+          publish: pnpm changeset:publish
+          commit: 'chore(release): version packages'
+          title: 'chore(release): version packages'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

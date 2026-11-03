@@ -19,16 +19,8 @@ export interface VerifiedJwtPayload extends JwtPayload {
   iat?: number;
 }
 
-/** req.user 形态（JwtStrategy.validate 返回值；只保留安全字段，不透传 payload 原文） */
-export interface AuthUser {
-  id: string;
-  username: string;
-  roles: string[];
-  /** 当前凭证 JWT ID（登出吊销用） */
-  jti: string;
-  /** 当前凭证过期时间（秒级 Unix 时间戳；黑名单 TTL 依据） */
-  exp: number;
-}
+/** req.user 形态：定义已上移 contracts（SPI 契约），此处再导出保持既有导入路径兼容 */
+export type { AuthUser } from '../../contracts/auth.js';
 
 /** 登录/刷新结果：双凭证（access 短效 + refresh 长效） */
 export interface LoginResult {

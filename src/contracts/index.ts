@@ -5,3 +5,4 @@
  */
 export { AUDIT_SINK } from './audit-sink.js';
 export type { AuditEntry, AuditSink } from './audit-sink.js';
+export type { AuthUser } from './auth.js';

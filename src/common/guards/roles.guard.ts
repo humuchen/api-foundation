@@ -1,6 +1,6 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import type { AuthUser } from '../../infra/auth/auth.types.js';
+import type { AuthUser } from '../../contracts/index.js';
 import { ROLES_KEY } from '../constants/metadata.constants.js';
 import { BizException } from '../exceptions/biz.exception.js';
 import { ErrorCode } from '../error-codes.js';

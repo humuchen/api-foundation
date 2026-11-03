@@ -1,0 +1,31 @@
+{
+  "name": "__NAME__",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "__NAME__：基于 @humuchen/foundation 底座的业务服务",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/main.js"
+  },
+  "prisma": {
+    "schema": "prisma"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "dependencies": {
+    "@humuchen/foundation": "^1.0.0",
+    "@nestjs/common": "12.3.0",
+    "@nestjs/core": "12.3.0",
+    "@nestjs/platform-express": "12.3.0",
+    "@prisma/client": "^6.19.3",
+    "prisma": "^6.19.3",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "typescript": "^5.9.3"
+  }
+}

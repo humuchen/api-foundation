@@ -1,0 +1,44 @@
+// ============================================================
+// @humuchen/foundation 核心 schema 片段（随包发布：package.json files 含 prisma/fragments）
+// 仅模型定义，无 datasource/generator —— 业务项目将本文件复制进自身 prisma/ 目录
+// （目录模式下多 .prisma 文件自动合并；datasource 与 generator 由业务侧唯一持有）。
+// 模板脚手架 create-biz-app 会自动完成复制；手工接入时复制后执行 pnpm prisma generate。
+// 版本对齐：本文件随核心包版本演进（模型仅增不改），MAJOR 版本可能包含迁移 SQL，见 CHANGELOG。
+// ============================================================
+
+model User {
+  id           String   @id @default(uuid())
+  username     String   @unique
+  passwordHash String
+  nickname     String
+  // SQLite 不支持标量数组：角色以 JSON 序列化存储（["admin","ops","user"]），
+  // 仓储层负责与 roles: string[] 的映射；切换 PostgreSQL 后可改为 JSONB
+  rolesJson    String   @default("[]")
+  // 租户归属：null = 平台级账号（不受租户隔离约束）
+  tenantId     String?
+  disabled     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([tenantId])
+  @@map("users")
+}
+
+// 审计持久化：who/when/what/入参摘要/结果/链路/租户
+model AuditLog {
+  id            String   @id @default(uuid())
+  requestId     String
+  tenantId      String?
+  action        String
+  method        String
+  path          String
+  actorId       String?
+  actorUsername String?
+  bodyJson      String?
+  success       Boolean
+  durationMs    Int
+  createdAt     DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("audit_logs")
+}
