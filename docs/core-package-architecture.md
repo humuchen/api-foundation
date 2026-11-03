@@ -1,7 +1,7 @@
 # 核心包架构方案：api-foundation 库化为 pnpm 私有底座包
 
-> 状态：**P1-P3 已落地（2026-11-03）**，P4 待启动 ｜ 范围：核心包抽取、版本管理与发布、业务接入与升级、依赖关系与扩展机制
-> 前置：当前仓库为 NestJS 12 + ESM + pnpm 的可运行应用（`src/main.ts` + `app.module.ts`）
+> 状态：**P1-P4 已落地（2026-11-03）** ｜ 范围：核心包抽取、版本管理与发布、业务接入与升级、依赖关系与扩展机制
+> 前置：NestJS 12 + 原生 ESM + pnpm；本仓库已完成「单应用 → 库」改造，本文描述的为目标态与实施结果（使用指南见 `README.md`）
 
 ## 1. 目标与设计原则
 
@@ -68,7 +68,7 @@ import { FoundationModule, AUDIT_SINK } from '@humuchen/foundation';
   imports: [
     FoundationModule.forRoot({
       config: { cache: { store: 'redis', redisUrl: process.env.REDIS_URL } },
-      replacements: [{ token: AUDIT_SINK, useClass: PgAuditSink }]
+      replacements: [{ provide: AUDIT_SINK, useClass: PgAuditSink }]
     }),
     OrderModule // 纯业务模块
   ]
@@ -83,43 +83,41 @@ await bootstrap(AppModule);
 ### 3.2 目录结构与子路径导出
 
 ```
-api-foundation/                        # 包名：@humuchen/foundation（scope 占位，按组织替换）
+api-foundation/                        # 包名：@humuchen/foundation
 ├── src/
 │   ├── index.ts                       # 根出口：bootstrap、FoundationModule、公共类型
 │   ├── factory/                       # bootstrap 工厂（全局组件装配）
 │   ├── common/                        # 横切底座：错误码、BizException、统一响应、分页、装饰器
+│   ├── context/                       # 请求上下文原语（ALS）：common 与 infra 的共同底层
 │   ├── infra/                         # 框架集成：logger / auth / cache / audit 默认实现
 │   ├── contracts/                     # SPI 契约：DI Token + 接口定义（扩展点唯一入口）
 │   ├── health/
 │   └── modules/user/                  # 参考实现：可选启用，独立子路径导出
 ├── apps/demo/                         # 宿主应用：e2e 测试 + 本地调试
-├── prisma/                            # schema 片段 + 随包 SQL 迁移（见 3.4）
+├── templates/biz-app/                 # 业务项目脚手架模板（pnpm create:biz-app 消费）
+├── prisma/fragments/foundation.prisma # 核心 schema 片段（随包发布，业务侧目录模式合并）
+├── .dependency-cruiser.cjs            # 依赖方向防腐规则（CI 强制）
 ├── .changeset/                        # 变更记录
 └── package.json
 ```
 
-`package.json` 关键字段：
+`package.json` 关键字段（与当前实现一致）：
 
 ```jsonc
 {
   "name": "@humuchen/foundation",
   "version": "1.0.0",
   "type": "module",
-  "files": ["dist"],
+  "engines": { "node": ">=22.0.0" },
+  "files": ["dist", "prisma/fragments"],
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
-    "./common": {
-      "types": "./dist/common/index.d.ts",
-      "import": "./dist/common/index.js"
-    },
-    "./contracts": {
-      "types": "./dist/contracts/index.d.ts",
-      "import": "./dist/contracts/index.js"
-    },
-    "./modules/user": {
-      "types": "./dist/modules/user/index.d.ts",
-      "import": "./dist/modules/user/index.js"
-    }
+    ".":               { "types": "./dist/index.d.ts",              "import": "./dist/index.js" },
+    "./common":        { "types": "./dist/common/index.d.ts",       "import": "./dist/common/index.js" },
+    "./contracts":     { "types": "./dist/contracts/index.d.ts",    "import": "./dist/contracts/index.js" },
+    "./health":        { "types": "./dist/health/index.d.ts",       "import": "./dist/health/index.js" },
+    "./modules/hello": { "types": "./dist/modules/hello/index.d.ts","import": "./dist/modules/hello/index.js" },
+    "./modules/user":  { "types": "./dist/modules/user/index.d.ts", "import": "./dist/modules/user/index.js" },
+    "./package.json":  "./package.json"
   },
   "peerDependencies": {
     "@nestjs/common": "^12.0.0",
@@ -127,14 +125,11 @@ api-foundation/                        # 包名：@humuchen/foundation（scope �
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2"
   },
-  "dependencies": {
-    "pino": "^10.4.0",
-    "bcryptjs": "^3.0.3",
-    "@keyv/redis": "^6.1.0"
-  },
-  "publishConfig": { "registry": "https://registry.example.com/" }
+  "dependencies": { "pino": "^10.4.0", "bcryptjs": "^3.0.3", "@keyv/redis": "^6.1.0", "…": "…" }
 }
 ```
+
+> 发布目标 registry 不在包内固化（`publishConfig` 已移除）：发布源与凭证统一由 `release.yml` 的 `REGISTRY_URL` + `NPM_TOKEN` 配置，避免多环境多份配置漂移。
 
 导出原则：`/common`、`/contracts` 面向业务；`/infra` 为内部实现默认不导出（逼业务走 SPI 而非 deep-import）；`exports` 字段使未列出的路径物理不可达，替代口头约定。
 
@@ -153,7 +148,7 @@ pnpm 严格隔离在此是红利：业务项目只能 import 自己声明过的�
 
 核心包只拥有少量表（`audit_logs`；启用 user 参考实现时含 `users`）。两个方案：
 
-- **方案 A（推荐）—— schema 片段 + 顺序化 SQL 迁移随包发布**：核心包发布 `prisma/foundation/` 片段与 `migrations/foundation/0001_*.sql`，业务项目在自己的迁移流程中按序执行（目录名带核心版本号，幂等可重放）。单库单 client，部署最简。
+- **方案 A（已落地）—— schema 片段随包发布 + 业务侧目录模式合并**：核心包随包发布模型片段 `prisma/fragments/foundation.prisma`（仅模型，无 datasource/generator）；业务项目启用 Prisma 目录模式（`package.json` 的 `"prisma": { "schema": "prisma" }`），将片段复制进自身 `prisma/` 目录后多文件自动合并，datasource 与 generator 由业务侧唯一持有。脚手架 `create-biz-app` 自动完成复制；核心升级后需同步更新片段（表结构仅增不改，MAJOR 可能附迁移 SQL）。单库单 client，部署最简。
 - **方案 B —— 核心内置独立 PrismaClient**：generated client 随包分发到 `node_modules`，与业务客户端同进程并存（Prisma 支持）。隔离彻底，但双 client、双迁移链路，运维成本高，仅在业务表与核心表必须分库时选。
 
 默认仓储实现（`AuditSink` 等）同时以 SPI 接口暴露，业务可用 DI 替换为任意存储，不绑死 Prisma。
@@ -201,7 +196,7 @@ CI（GitHub Actions）发布 job 骨架：`lint → test(单测+E2E) → build �
 always-auth=true
 ```
 
-发布端在核心包 `publishConfig.registry` 固化私源地址，避免误发公网 npm。
+发布端不再固化 registry（`publishConfig` 已移除）；发布源与凭证统一在 `release.yml` 中以 `REGISTRY_URL` 环境变量 + `NPM_TOKEN` secret 配置（CI 内写入 `~/.npmrc` 的 scope 映射）。
 
 ### 4.4 预发布通道与回滚
 
@@ -211,9 +206,11 @@ always-auth=true
 
 ## 5. 业务项目接入与升级
 
-### 5.1 初始化接入（五步）
+### 5.1 初始化接入
 
-1. 配置 `.npmrc`（见 4.3）→ 2. `pnpm add @humuchen/foundation @nestjs/common @nestjs/core reflect-metadata rxjs`（peer 需业务自装）→ 3. `AppModule` 引入 `FoundationModule.forRoot({...})` → 4. `main.ts` 换为 `bootstrap(AppModule)` → 5. 按 3.4 执行核心表迁移，跑通 `/health` 与 `/auth/login` 即接入完成。
+**脚手架（推荐，一条命令）**：`pnpm create:biz-app ../order-service --name @yourorg/order-service --port 3100 --registry <私源>` —— 自动生成装配样板、L1/L2 扩展示例、prisma 目录模式 schema（含核心片段）与私源 `.npmrc`。
+
+**手工接入（五步）**：1. 配置 `.npmrc`（见 4.3）→ 2. `pnpm add @humuchen/foundation @nestjs/common @nestjs/core reflect-metadata rxjs`（peer 需业务自装）→ 3. `AppModule` 引入 `FoundationModule.forRoot({...})` → 4. `main.ts` 换为 `bootstrap(AppModule)` → 5. 按 3.4 合并核心 schema 片段并执行迁移，跑通 `/health` 与 `/auth/login` 即接入完成。
 
 ### 5.2 版本策略与升级流程
 
@@ -235,7 +232,7 @@ always-auth=true
 
 ### 6.1 依赖方向与防腐化
 
-- **单向依赖**：业务 → 核心。核心仓库 CI 用 dependency-cruiser（或 eslint-plugin-boundaries）静态校验「src 不得引用任何外部业务包」，违规即红灯。
+- **单向依赖（已落地强制）**：业务 → 核心。核心仓库以 dependency-cruiser 静态校验分层（`contracts → common → infra/factory`，`src` 不得引用 `apps`），规则见 `.dependency-cruiser.cjs`，经 `pnpm depcruise` 在本地与 CI 双侧强制，违规即红灯。
 - **物理封边**：`exports` 字段使 `@humuchen/foundation/infra/...` 等内部路径无法 deep-import。
 - **版本对齐**：框架 peer 由业务单实例持有；若业务传递引入多版本 Nest，用 pnpm `overrides` 强制收敛到单一版本。
 
@@ -244,7 +241,7 @@ always-auth=true
 | 层  | 机制       | 业务写什么                                                | 核心提供什么                 |
 | --- | ---------- | --------------------------------------------------------- | ---------------------------- |
 | L1  | 配置       | `forRoot({ config })` 覆盖缓存/限流/审计参数              | 类型化选项 + env 启动校验    |
-| L2  | DI 替换    | `replacements: [{ token: AUDIT_SINK, useClass: MySink }]` | `contracts/` 中 Token + 接口 |
+| L2  | DI 替换    | `replacements: [{ provide: AUDIT_SINK, useClass: MySink }]` | `contracts/` 中 Token + 接口 |
 | L3  | 事件订阅   | `@OnEvent('user.changed')` 旁路响应                       | 进程内事件总线与事件契约     |
 | L4  | 装饰器组合 | `@Public()` / `@Roles()` / `@Audit()` / `@Idempotent()`   | 端点级行为开关               |
 | L5  | 回馈核心   | 需求普适时提 feature PR                                   | RFC 评审 + feature flag 灰度 |
@@ -256,8 +253,9 @@ SPI 契约示例：
 export const AUDIT_SINK = Symbol('AUDIT_SINK');
 export interface AuditSink {
   record(entry: AuditEntry): Promise<void>;
+  list(limit: number): Promise<AuditEntry[]>;
 }
-// 核心默认实现绑定该 Token；业务经 replacements 整体换实现，核心其余逻辑零改动
+// 核心默认实现（PrismaAuditSink）绑定该 Token；业务经 replacements 整体换实现（同 Token last-wins），核心其余逻辑零改动
 ```
 
 判定顺序：改参数 → L1；换实现 → L2；旁路响应 → L3；端点开关 → L4；都不满足且需求跨项目普适 → L5。
@@ -269,6 +267,7 @@ export interface AuditSink {
 ### 6.4 兼容性承诺（核心包 README 固化）
 
 Node ≥ 22 LTS ｜ NestJS 12.x（peer `^12.0.0`）｜ Prisma 6.x ｜ pnpm ≥ 10 ｜ 原生 ESM（NodeNext）。
+矩阵已机械化强制：核心包 `package.json` 声明 `engines`，配合 `.npmrc` 的 `engine-strict=true`，Node 版本不满足时安装即失败；脚手架生成的业务工程继承同一约束。
 
 ## 7. 落地路线
 
@@ -277,4 +276,4 @@ Node ≥ 22 LTS ｜ NestJS 12.x（peer `^12.0.0`）｜ Prisma 6.x ｜ pnpm ≥ 1
 | P1 就地库化     | `src/` 转纯库、demo 宿主迁移、exports/peer/changesets 配置       | 核心包 1.0.0，`apps/demo` e2e 全绿（33 测试）                                               | ✅ 完成                       |
 | P2 私有源与首版 | Registry 就绪、CI 发布流水线、发布 1.0.0 并打 tag                | release.yml（registry/token 占位待填）；Verdaccio 本地冒烟发布 1.0.0 验证通过               | ✅ 流水线就绪，正式私源待配置 |
 | P3 业务试点     | 第一个业务项目接入，按反馈打磨 SPI 与文档                        | `../foundation-trial`：私服安装 → tsc 类型检查 → L1 端口覆盖 + L2 审计替换 → 真实启动全通过 | ✅ 完成                       |
-| P4 治理与规模化 | 业务脚手架模板（create-biz-app）、兼容性矩阵自动化检查、依赖看板 | 新业务半天内完成接入                                                                        | ⏳ 待启动                     |
+| P4 治理与规模化 | 业务脚手架模板（create-biz-app）、兼容性矩阵自动化检查、依赖看板 | `pnpm create:biz-app` 脚手架端到端验证通过；dependency-cruiser 防腐校验接入 CI；engines(node>=22)+engine-strict；prisma 片段随包发布 | ✅ 完成                       |
