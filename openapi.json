@@ -435,6 +435,1200 @@
         ]
       }
     },
+    "/api/v1/admin/bootstrap": {
+      "get": {
+        "operationId": "AdminBootstrapController_bootstrap_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "后台启动上下文（用户/权限码/可见菜单树/ui 主题布局，一次拉取）",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/rbac/roles": {
+      "get": {
+        "operationId": "RbacController_listRoles_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "角色列表（admin:role:list；按 sort/createdAt 升序）",
+        "tags": [
+          "admin/rbac"
+        ]
+      },
+      "post": {
+        "operationId": "RbacController_createRole_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRoleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "创建角色（admin:role:create）",
+        "tags": [
+          "admin/rbac"
+        ]
+      }
+    },
+    "/api/v1/admin/rbac/roles/{id}": {
+      "patch": {
+        "operationId": "RbacController_updateRole_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "资源 ID",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRoleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "更新角色（admin:role:update；code 创建后不可改）",
+        "tags": [
+          "admin/rbac"
+        ]
+      },
+      "delete": {
+        "operationId": "RbacController_deleteRole_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "资源 ID",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "删除角色（admin:role:delete；内置角色与有绑定角色拒绝）",
+        "tags": [
+          "admin/rbac"
+        ]
+      }
+    },
+    "/api/v1/admin/rbac/permissions": {
+      "get": {
+        "operationId": "RbacController_listPermissions_v1",
+        "parameters": [
+          {
+            "name": "resource",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "权限点列表（admin:permission:list；?resource= 按资源域过滤）",
+        "tags": [
+          "admin/rbac"
+        ]
+      },
+      "post": {
+        "operationId": "RbacController_createPermission_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePermissionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "创建权限点（admin:permission:create；业务域自定义权限入口）",
+        "tags": [
+          "admin/rbac"
+        ]
+      }
+    },
+    "/api/v1/admin/rbac/roles/{id}/permissions": {
+      "get": {
+        "operationId": "RbacController_listRolePermissions_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "资源 ID",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "角色已授权权限码（admin:role:list；授权面板回显）",
+        "tags": [
+          "admin/rbac"
+        ]
+      },
+      "put": {
+        "operationId": "RbacController_grantRolePermissions_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "资源 ID",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GrantPermissionsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "全量替换角色授权（admin:role:grant；即时生效）",
+        "tags": [
+          "admin/rbac"
+        ]
+      }
+    },
+    "/api/v1/admin/rbac/users/{userId}/roles": {
+      "get": {
+        "operationId": "RbacController_listUserRoles_v1",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "description": "用户 ID",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "用户绑定角色（admin:user-role:list；含禁用角色）",
+        "tags": [
+          "admin/rbac"
+        ]
+      },
+      "put": {
+        "operationId": "RbacController_bindUserRoles_v1",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "description": "用户 ID",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BindUserRolesDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "全量替换用户角色绑定（admin:user-role:bind；即时生效，无需重新登录）",
+        "tags": [
+          "admin/rbac"
+        ]
+      }
+    },
+    "/api/v1/admin/menus/tree": {
+      "get": {
+        "operationId": "MenuController_tree_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "全量菜单树（admin:menu:list；管理端维护视图）",
+        "tags": [
+          "admin/menus"
+        ]
+      }
+    },
+    "/api/v1/admin/menus/my": {
+      "get": {
+        "operationId": "MenuController_myTree_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "我的可见菜单树（任意登录用户；前端动态路由数据源）",
+        "tags": [
+          "admin/menus"
+        ]
+      }
+    },
+    "/api/v1/admin/menus": {
+      "post": {
+        "operationId": "MenuController_create_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMenuDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "创建菜单（admin:menu:create）",
+        "tags": [
+          "admin/menus"
+        ]
+      }
+    },
+    "/api/v1/admin/menus/{id}": {
+      "patch": {
+        "operationId": "MenuController_update_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "资源 ID",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMenuDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "更新菜单（admin:menu:update；内置菜单可改展示信息）",
+        "tags": [
+          "admin/menus"
+        ]
+      },
+      "delete": {
+        "operationId": "MenuController_remove_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "资源 ID",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "删除菜单（admin:menu:delete；内置菜单与含子级菜单拒绝）",
+        "tags": [
+          "admin/menus"
+        ]
+      }
+    },
+    "/api/v1/admin/dicts/types": {
+      "get": {
+        "operationId": "DictController_listTypes_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "字典类型列表（admin:dict:list）",
+        "tags": [
+          "admin/dicts"
+        ]
+      },
+      "post": {
+        "operationId": "DictController_createType_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDictTypeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "创建字典类型（admin:dict:create）",
+        "tags": [
+          "admin/dicts"
+        ]
+      }
+    },
+    "/api/v1/admin/dicts/types/{id}": {
+      "patch": {
+        "operationId": "DictController_updateType_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "资源 ID",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDictTypeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "更新字典类型（admin:dict:update；code 不可改）",
+        "tags": [
+          "admin/dicts"
+        ]
+      },
+      "delete": {
+        "operationId": "DictController_deleteType_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "资源 ID",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "删除字典类型（admin:dict:delete；连同全部字典项）",
+        "tags": [
+          "admin/dicts"
+        ]
+      }
+    },
+    "/api/v1/admin/dicts/{code}/items": {
+      "get": {
+        "operationId": "DictController_listItems_v1",
+        "parameters": [
+          {
+            "name": "code",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeDisabled",
+            "required": false,
+            "in": "query",
+            "description": "是否包含停用项",
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "字典项列表（任意登录用户；前端表单选项数据源）",
+        "tags": [
+          "admin/dicts"
+        ]
+      },
+      "post": {
+        "operationId": "DictController_createItem_v1",
+        "parameters": [
+          {
+            "name": "code",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDictItemDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "创建字典项（admin:dict:create）",
+        "tags": [
+          "admin/dicts"
+        ]
+      }
+    },
+    "/api/v1/admin/dicts/items/{id}": {
+      "patch": {
+        "operationId": "DictController_updateItem_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "资源 ID",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDictItemDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "更新字典项（admin:dict:update；value 不可改）",
+        "tags": [
+          "admin/dicts"
+        ]
+      },
+      "delete": {
+        "operationId": "DictController_deleteItem_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "资源 ID",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "删除字典项（admin:dict:delete）",
+        "tags": [
+          "admin/dicts"
+        ]
+      }
+    },
+    "/api/v1/admin/configs": {
+      "get": {
+        "operationId": "SysConfigController_list_v1",
+        "parameters": [
+          {
+            "name": "group",
+            "required": false,
+            "in": "query",
+            "description": "按分组过滤（如 ui）",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "配置列表（?group= 过滤；登录即可读，ui 组供前端主题/布局）",
+        "tags": [
+          "admin/configs"
+        ]
+      },
+      "post": {
+        "operationId": "SysConfigController_create_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSysConfigDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "创建配置（admin:config:create）",
+        "tags": [
+          "admin/configs"
+        ]
+      }
+    },
+    "/api/v1/admin/configs/{key}": {
+      "put": {
+        "operationId": "SysConfigController_update_v1",
+        "parameters": [
+          {
+            "name": "key",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSysConfigDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "更新配置值（admin:config:update；主题/布局调整入口）",
+        "tags": [
+          "admin/configs"
+        ]
+      },
+      "delete": {
+        "operationId": "SysConfigController_remove_v1",
+        "parameters": [
+          {
+            "name": "key",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "删除配置（admin:config:delete；内置配置拒绝）",
+        "tags": [
+          "admin/configs"
+        ]
+      }
+    },
+    "/api/v1/admin/crud/_registry": {
+      "get": {
+        "operationId": "CrudController_registry_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "已注册 CRUD 资源摘要（任意登录用户；动态工作台数据源）",
+        "tags": [
+          "admin/crud"
+        ]
+      }
+    },
+    "/api/v1/admin/crud/{resource}/schema": {
+      "get": {
+        "operationId": "CrudController_schema_v1",
+        "parameters": [
+          {
+            "name": "resource",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "资源元数据 schema（任意登录用户；表格列+表单项渲染契约）",
+        "tags": [
+          "admin/crud"
+        ]
+      }
+    },
+    "/api/v1/admin/crud/{resource}": {
+      "get": {
+        "operationId": "CrudController_page_v1",
+        "parameters": [
+          {
+            "name": "resource",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "分页查询（动态权限 <prefix>:list；inFilter 字段作为查询参数，keyword 全文模糊）",
+        "tags": [
+          "admin/crud"
+        ]
+      },
+      "post": {
+        "operationId": "CrudController_create_v1",
+        "parameters": [
+          {
+            "name": "resource",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "创建（动态权限 <prefix>:create）",
+        "tags": [
+          "admin/crud"
+        ]
+      }
+    },
+    "/api/v1/admin/crud/{resource}/{id}": {
+      "get": {
+        "operationId": "CrudController_detail_v1",
+        "parameters": [
+          {
+            "name": "resource",
+            "required": true,
+            "in": "path",
+            "description": "资源标识",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "记录 ID",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "详情（动态权限 <prefix>:list）",
+        "tags": [
+          "admin/crud"
+        ]
+      },
+      "patch": {
+        "operationId": "CrudController_update_v1",
+        "parameters": [
+          {
+            "name": "resource",
+            "required": true,
+            "in": "path",
+            "description": "资源标识",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "记录 ID",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "更新（动态权限 <prefix>:update；部分更新语义，readOnly 字段剥离）",
+        "tags": [
+          "admin/crud"
+        ]
+      },
+      "delete": {
+        "operationId": "CrudController_remove_v1",
+        "parameters": [
+          {
+            "name": "resource",
+            "required": true,
+            "in": "path",
+            "description": "资源标识",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "记录 ID",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "删除（动态权限 <prefix>:delete）",
+        "tags": [
+          "admin/crud"
+        ]
+      }
+    },
+    "/api/v1/admin/audit-logs": {
+      "get": {
+        "operationId": "AuditLogController_page_v1",
+        "parameters": [
+          {
+            "name": "page",
+            "required": true,
+            "in": "query",
+            "description": "页码（从 1 开始）",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": true,
+            "in": "query",
+            "description": "每页条数（上限 100）",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "排序，格式 field:asc|desc，如 createdAt:desc；可排序字段见各模块白名单",
+            "schema": {
+              "example": "createdAt:desc",
+              "type": "string"
+            }
+          },
+          {
+            "name": "action",
+            "required": false,
+            "in": "query",
+            "description": "按审计动作过滤（支持前缀匹配，如 admin:role:*）",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "actorUsername",
+            "required": false,
+            "in": "query",
+            "description": "按操作者用户名精确过滤",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "success",
+            "required": false,
+            "in": "query",
+            "description": "按结果过滤（true 成功 / false 失败）",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "tenantId",
+            "required": false,
+            "in": "query",
+            "description": "按租户过滤",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "start",
+            "required": false,
+            "in": "query",
+            "description": "起始时间（含）",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "end",
+            "required": false,
+            "in": "query",
+            "description": "结束时间（含）",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "分页查询审计记录（admin:audit:list；action 支持前缀通配 admin:role:*，success/actorUsername/tenantId/start/end 筛选）",
+        "tags": [
+          "admin/audit-logs"
+        ]
+      }
+    },
     "/api/v1/health": {
       "get": {
         "operationId": "HealthController_check_v1",
@@ -581,6 +1775,396 @@
             ]
           }
         }
+      },
+      "CreateRoleDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "ecommerce-manager",
+            "description": "角色编码（唯一，创建后不可改）"
+          },
+          "name": {
+            "type": "string",
+            "example": "电商运营",
+            "description": "角色名称"
+          },
+          "description": {
+            "type": "string",
+            "description": "角色描述"
+          },
+          "sort": {
+            "type": "number",
+            "default": 0,
+            "description": "排序权重（小者在前）"
+          },
+          "disabled": {
+            "type": "boolean",
+            "default": false,
+            "description": "是否禁用（禁用后其授权不再生效）"
+          }
+        },
+        "required": [
+          "code",
+          "name"
+        ]
+      },
+      "UpdateRoleDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "角色名称"
+          },
+          "description": {
+            "type": "string",
+            "description": "角色描述"
+          },
+          "sort": {
+            "type": "number",
+            "description": "排序权重"
+          },
+          "disabled": {
+            "type": "boolean",
+            "description": "是否禁用"
+          }
+        }
+      },
+      "CreatePermissionDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "order:refund:approve",
+            "description": "权限编码（唯一，创建后不可改）"
+          },
+          "name": {
+            "type": "string",
+            "example": "订单退款审批",
+            "description": "权限名称"
+          },
+          "resource": {
+            "type": "string",
+            "example": "refund",
+            "description": "资源域（权限分组展示用）"
+          },
+          "action": {
+            "type": "string",
+            "example": "approve",
+            "description": "动作标识"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "api",
+              "menu",
+              "button"
+            ],
+            "default": "api",
+            "description": "权限类型"
+          },
+          "description": {
+            "type": "string",
+            "description": "权限描述"
+          },
+          "sort": {
+            "type": "number",
+            "default": 0,
+            "description": "排序权重"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "resource",
+          "action"
+        ]
+      },
+      "GrantPermissionsDto": {
+        "type": "object",
+        "properties": {
+          "permissionCodes": {
+            "example": [
+              "admin:role:list",
+              "demo:product:create"
+            ],
+            "description": "授权权限码全集（全量替换；空数组 = 收回全部授权）",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "permissionCodes"
+        ]
+      },
+      "BindUserRolesDto": {
+        "type": "object",
+        "properties": {
+          "roleCodes": {
+            "example": [
+              "ops"
+            ],
+            "description": "绑定角色编码全集（全量替换；空数组 = 解绑全部）",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "roleCodes"
+        ]
+      },
+      "CreateMenuDto": {
+        "type": "object",
+        "properties": {
+          "parentId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "父级菜单 ID（缺省 = 顶级）"
+          },
+          "name": {
+            "type": "string",
+            "example": "角色管理",
+            "description": "菜单名称"
+          },
+          "path": {
+            "type": "string",
+            "example": "/system/roles",
+            "description": "路由路径（站内唯一，/ 开头）"
+          },
+          "component": {
+            "type": "string",
+            "example": "admin/RoleList",
+            "description": "前端组件标识（渲染器按此懒加载页面）"
+          },
+          "icon": {
+            "type": "string",
+            "description": "图标标识"
+          },
+          "sort": {
+            "type": "number",
+            "default": 0,
+            "description": "排序权重（小者在前）"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "directory",
+              "menu"
+            ],
+            "default": "menu",
+            "description": "菜单类型"
+          },
+          "permCode": {
+            "type": "string",
+            "example": "admin:role:list",
+            "description": "可见性权限码（缺省 = 登录即可见；置值则需权限集合包含）"
+          },
+          "visible": {
+            "type": "boolean",
+            "default": true,
+            "description": "是否在导航中显示"
+          },
+          "meta": {
+            "type": "object",
+            "example": {
+              "title": "角色管理",
+              "keepAlive": true,
+              "layout": "sidebar"
+            },
+            "description": "路由元信息（title/keepAlive/layout/theme 等，原样下发前端生成动态路由）"
+          }
+        },
+        "required": [
+          "name",
+          "path"
+        ]
+      },
+      "UpdateMenuDto": {
+        "type": "object",
+        "properties": {
+          "parentId": {
+            "type": "string",
+            "description": "父级菜单 ID"
+          },
+          "name": {
+            "type": "string",
+            "description": "菜单名称"
+          },
+          "path": {
+            "type": "string",
+            "description": "路由路径"
+          },
+          "component": {
+            "type": "string",
+            "description": "前端组件标识"
+          },
+          "icon": {
+            "type": "string",
+            "description": "图标标识"
+          },
+          "sort": {
+            "type": "number",
+            "description": "排序权重"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "directory",
+              "menu"
+            ],
+            "description": "菜单类型"
+          },
+          "permCode": {
+            "type": "string",
+            "description": "可见性权限码"
+          },
+          "visible": {
+            "type": "boolean",
+            "description": "是否在导航中显示"
+          },
+          "meta": {
+            "type": "object",
+            "description": "路由元信息"
+          }
+        }
+      },
+      "CreateDictTypeDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "demo_category",
+            "description": "字典编码（唯一，业务引用键）"
+          },
+          "name": {
+            "type": "string",
+            "example": "商品分类",
+            "description": "字典名称"
+          },
+          "description": {
+            "type": "string",
+            "description": "字典描述"
+          }
+        },
+        "required": [
+          "code",
+          "name"
+        ]
+      },
+      "UpdateDictTypeDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "字典名称"
+          },
+          "description": {
+            "type": "string",
+            "description": "字典描述"
+          }
+        }
+      },
+      "CreateDictItemDto": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string",
+            "example": "electronics",
+            "description": "字典项值（类型内唯一，写入业务数据）"
+          },
+          "label": {
+            "type": "string",
+            "example": "数码",
+            "description": "字典项标签（展示用）"
+          },
+          "sort": {
+            "type": "number",
+            "default": 0,
+            "description": "排序权重（小者在前）"
+          },
+          "disabled": {
+            "type": "boolean",
+            "default": false,
+            "description": "是否停用"
+          },
+          "extra": {
+            "type": "object",
+            "description": "扩展信息（如国际化键/颜色/图标）"
+          }
+        },
+        "required": [
+          "value",
+          "label"
+        ]
+      },
+      "UpdateDictItemDto": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string",
+            "description": "字典项标签"
+          },
+          "sort": {
+            "type": "number",
+            "description": "排序权重"
+          },
+          "disabled": {
+            "type": "boolean",
+            "description": "是否停用"
+          },
+          "extra": {
+            "type": "object",
+            "description": "扩展信息"
+          }
+        }
+      },
+      "CreateSysConfigDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "example": "brand.logo",
+            "description": "配置键（唯一，点分命名：组.键）"
+          },
+          "group": {
+            "type": "string",
+            "example": "brand",
+            "description": "分组（ui 组为前端主题/布局保留组）"
+          },
+          "value": {
+            "type": "object",
+            "example": {
+              "primary": "#4f6ef2",
+              "mode": "light"
+            },
+            "description": "配置值（任意 JSON）"
+          },
+          "description": {
+            "type": "string",
+            "description": "配置描述"
+          }
+        },
+        "required": [
+          "key",
+          "group",
+          "value"
+        ]
+      },
+      "UpdateSysConfigDto": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "object",
+            "description": "配置值（任意 JSON，全量替换）"
+          }
+        },
+        "required": [
+          "value"
+        ]
       }
     }
   }

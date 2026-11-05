@@ -45,3 +45,149 @@ model AuditLog {
   @@index([createdAt])
   @@map("audit_logs")
 }
+
+// ============================================================
+// admin 通用后台管理系统模块（src/modules/admin，与 fragments/foundation.prisma 同步双写）
+// ============================================================
+
+// 角色：code 为授权主键；builtin 角色受保护（不可删/不可改 code）
+model AdminRole {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  name        String
+  description String?
+  builtin     Boolean  @default(false)
+  sort        Int      @default(0)
+  disabled    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("admin_roles")
+}
+
+// 权限点：code 约定 <domain>:<resource>:<action>（如 admin:role:list / demo:product:create）
+model AdminPermission {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  name        String
+  resource    String
+  action      String
+  // api=接口权限 menu=菜单可见性 button=按钮级（前端 v-perm）
+  type        String   @default("api")
+  description String?
+  sort        Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([resource])
+  @@map("admin_permissions")
+}
+
+// 角色-权限绑定（全量替换式授权）
+model AdminRolePermission {
+  roleId       String
+  permissionId String
+  createdAt    DateTime @default(now())
+
+  @@id([roleId, permissionId])
+  @@index([permissionId])
+  @@map("admin_role_permissions")
+}
+
+// 用户-角色绑定（实时授权主通道；users.rolesJson 为登录快照，兼容既有 @Roles）
+model AdminUserRole {
+  userId    String
+  roleId    String
+  createdAt DateTime @default(now())
+
+  @@id([userId, roleId])
+  @@index([roleId])
+  @@map("admin_user_roles")
+}
+
+// 菜单：前端动态路由数据源；parentId 自引用（仓储层手动组树，无 relation）
+// metaJson 承载路由元信息（title/keepAlive/layout/theme），约定见 docs/admin-module.md
+model AdminMenu {
+  id        String   @id @default(uuid())
+  parentId  String?
+  name      String
+  path      String   @unique
+  component String?
+  icon      String?
+  sort      Int      @default(0)
+  // directory=目录（含子级） menu=页面菜单
+  type      String   @default("menu")
+  // 可见性权限码：null=登录即可见；有值则需用户权限集合包含
+  permCode  String?
+  visible   Boolean  @default(true)
+  builtin   Boolean  @default(false)
+  metaJson  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([parentId])
+  @@map("admin_menus")
+}
+
+// 字典类型（code 即业务引用键，如 demo_category）
+model AdminDictType {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  name        String
+  description String?
+  builtin     Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("admin_dict_types")
+}
+
+// 字典项：typeCode 冗余引用（免 join，替换数据源时更解耦）；类型内 value 唯一
+model AdminDictItem {
+  id        String   @id @default(uuid())
+  typeCode  String
+  label     String
+  value     String
+  sort      Int      @default(0)
+  extraJson String?
+  disabled  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([typeCode, value])
+  @@index([typeCode])
+  @@map("admin_dict_items")
+}
+
+// 系统配置：valueJson 存任意 JSON 值；group 分组（ui 组承载主题/布局，前端启动拉取）
+model AdminSysConfig {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  group       String   @default("default")
+  valueJson   String
+  description String?
+  builtin     Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([group])
+  @@map("admin_sys_configs")
+}
+
+// ============================================================
+// demo 宿主业务表（不入 fragments：业务表由业务侧持有）
+// 通用 CRUD 引擎示例资源：apps/demo/demo-product.entity.ts 注册定义
+// ============================================================
+model DemoProduct {
+  id           String   @id @default(uuid())
+  name         String
+  categoryCode String   @default("other")
+  price        Float
+  stock        Int      @default(0)
+  status       String   @default("draft")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([status])
+  @@map("demo_products")
+}

@@ -11,6 +11,7 @@ export interface AuditMeta {
 /**
  * 审计埋点：标注需要审计的写操作端点，由全局 AuditInterceptor 异步记录。
  * 用法：@Audit('user:create', { includeBody: true })
+ * 动态资源：action 支持 {param} 占位符按路由参数展开，如 @Audit('crud:{resource}:create')。
  */
 export const Audit = (
   action: string,

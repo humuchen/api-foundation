@@ -49,7 +49,7 @@ src/
 ├── context/                  # 请求上下文原语（AsyncLocalStorage）：common 与 infra 的共同底层
 ├── contracts/                # SPI 契约：扩展点 DI Token + 接口（如 AUDIT_SINK、AuthUser）
 ├── infra/                    # 框架集成：logger（pino）、auth（JWT）、audit（默认 Prisma Sink）、database、idempotency
-├── modules/                  # 参考实现：hello（最小示例）、user（CRUD+分页+RBAC 参考）
+├── modules/                  # 参考实现：hello（最小示例）、user（CRUD+分页+RBAC 参考）、admin（通用后台管理系统）
 └── health/                   # 存活探针
 apps/demo/                    # 最小宿主应用：main.ts + app.module.ts（业务项目样板，E2E 载体）
 templates/biz-app/            # 业务项目脚手架模板（pnpm create:biz-app 消费）
@@ -101,7 +101,7 @@ import { bootstrap } from '@humuchen/foundation';
 await bootstrap(AppModule); // 全局 Pipe/Guard/Filter/Interceptor、安全加固、前缀/版本化、Swagger 全部内置
 ```
 
-- 子路径导出：`.`（根）、`./common`、`./contracts`、`./health`、`./modules/hello`、`./modules/user`
+- 子路径导出：`.`（根）、`./common`、`./contracts`、`./health`、`./modules/hello`、`./modules/user`、`./modules/admin`
 - peer 依赖：`@nestjs/common`、`@nestjs/core`、`reflect-metadata`、`rxjs`（业务自装，保证 DI 单实例）
 - 核心表结构随包发布：`node_modules/@humuchen/foundation/prisma/fragments/foundation.prisma`，复制进业务 `prisma/` 目录（目录模式多文件自动合并，随核心升级同步更新）
 - 发版：Changesets 流水线（特性 PR 附 changeset → Version PR → 自动 publish 并打 tag），见 `.github/workflows/release.yml`
@@ -124,6 +124,16 @@ await bootstrap(AppModule); // 全局 Pipe/Guard/Filter/Interceptor、安全加�
 | GET                   | /api/v2/hello | 公开  | URI 版本化 v2 演示（与 v1 并行）                                                                |
 | GET                   | /health       | 公开  | 存活探针（liveness）                                                                            |
 | GET                   | /health/ready | 公开  | 就绪探针（readiness：SELECT 1 校验数据库，失败 50002）                                          |
+
+## 通用后台管理系统模块（modules/admin）
+
+`AdminModule.forRoot()` 一行装配的可插拔后台管理域：**权限与角色**（`@RequirePerm` 实时鉴权，改权即生效，超管通配）、**菜单与动态路由**（按权限过滤的菜单树 + 路由元信息下发）、**通用 CRUD 引擎**（业务注册 `CrudEntityDefinition` 即得动态端点族 + `/schema` 表格/表单元数据，前端零硬编码）、**字典**、**系统配置**（`ui.theme`/`ui.layout` 承载多主题与响应式布局约定）、**审计分页查询**、**bootstrap 聚合端点**（启动一次拉取 user/permissions/menus/ui）。
+
+```ts
+AdminModule.forRoot({ crudEntities: [OrderEntityDef] })  // 配置式注册业务实体（或运行时 CrudRegistry.register）
+```
+
+内置幂等种子（角色/权限点/菜单/字典/ui 配置）、33xxx 业务错误码、权限码约定 `<domain>:<resource>:<action>`。模块结构、关键接口与扩展点、配置约定及电商/内容管理/运营后台的场景适配步骤详见 **`docs/admin-module.md`**。
 
 - Swagger：`http://localhost:3000/docs`（在线调试，右上角 Authorize 填入 token）
 - OpenAPI 导出：`pnpm run openapi:export` → `openapi.json`（供前端代码生成/网关导入）
