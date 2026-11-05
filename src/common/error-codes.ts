@@ -30,6 +30,39 @@ export const ErrorCode = {
   // 30xxx 业务规则
   BIZ_ERROR: 30000,
 
+  // 33xxx 通用后台管理域（src/modules/admin）：33 前缀 + 子域分段
+  // RBAC（3300x）
+  ADMIN_ROLE_NOT_FOUND: 33001,
+  ADMIN_ROLE_CODE_CONFLICT: 33002,
+  ADMIN_ROLE_BUILTIN_LOCKED: 33003,
+  ADMIN_ROLE_IN_USE: 33004,
+  ADMIN_PERMISSION_NOT_FOUND: 33005,
+  ADMIN_PERMISSION_CODE_CONFLICT: 33006,
+  // 菜单（3310x）
+  ADMIN_MENU_NOT_FOUND: 33101,
+  ADMIN_MENU_PATH_CONFLICT: 33102,
+  ADMIN_MENU_BUILTIN_LOCKED: 33103,
+  ADMIN_MENU_PARENT_INVALID: 33104,
+  ADMIN_MENU_HAS_CHILDREN: 33105,
+  // 字典（3320x）
+  ADMIN_DICT_TYPE_NOT_FOUND: 33201,
+  ADMIN_DICT_TYPE_CODE_CONFLICT: 33202,
+  ADMIN_DICT_TYPE_BUILTIN_LOCKED: 33203,
+  ADMIN_DICT_ITEM_NOT_FOUND: 33204,
+  ADMIN_DICT_VALUE_CONFLICT: 33205,
+  // 系统配置（3330x）
+  ADMIN_CONFIG_NOT_FOUND: 33301,
+  ADMIN_CONFIG_KEY_CONFLICT: 33302,
+  ADMIN_CONFIG_BUILTIN_LOCKED: 33303,
+  ADMIN_CONFIG_VALUE_INVALID: 33304,
+  // 通用 CRUD 引擎（3340x）
+  ADMIN_CRUD_RESOURCE_NOT_FOUND: 33401,
+  ADMIN_CRUD_FIELD_INVALID: 33402,
+  ADMIN_CRUD_MODEL_MISSING: 33403,
+  ADMIN_CRUD_RESOURCE_READONLY: 33404,
+  // 用户角色绑定（3350x）
+  ADMIN_BIND_USER_NOT_FOUND: 33501,
+
   // 40xxx 资源状态
   NOT_FOUND: 40001,
   CONFLICT: 40002,
@@ -59,6 +92,33 @@ export const ERROR_META: Record<Exclude<ErrorCodeValue, typeof ErrorCode.OK>, Er
   [ErrorCode.ACCOUNT_DISABLED]: { httpStatus: HttpStatus.FORBIDDEN, message: '账号已被禁用' },
 
   [ErrorCode.BIZ_ERROR]: { httpStatus: HttpStatus.UNPROCESSABLE_ENTITY, message: '业务处理失败' },
+
+  // 33xxx admin 后台管理域
+  [ErrorCode.ADMIN_ROLE_NOT_FOUND]: { httpStatus: HttpStatus.NOT_FOUND, message: '角色不存在' },
+  [ErrorCode.ADMIN_ROLE_CODE_CONFLICT]: { httpStatus: HttpStatus.CONFLICT, message: '角色编码已存在' },
+  [ErrorCode.ADMIN_ROLE_BUILTIN_LOCKED]: { httpStatus: HttpStatus.UNPROCESSABLE_ENTITY, message: '内置角色受保护，禁止该操作' },
+  [ErrorCode.ADMIN_ROLE_IN_USE]: { httpStatus: HttpStatus.UNPROCESSABLE_ENTITY, message: '角色仍被用户绑定，禁止删除' },
+  [ErrorCode.ADMIN_PERMISSION_NOT_FOUND]: { httpStatus: HttpStatus.NOT_FOUND, message: '权限点不存在' },
+  [ErrorCode.ADMIN_PERMISSION_CODE_CONFLICT]: { httpStatus: HttpStatus.CONFLICT, message: '权限编码已存在' },
+  [ErrorCode.ADMIN_MENU_NOT_FOUND]: { httpStatus: HttpStatus.NOT_FOUND, message: '菜单不存在' },
+  [ErrorCode.ADMIN_MENU_PATH_CONFLICT]: { httpStatus: HttpStatus.CONFLICT, message: '菜单路由路径已存在' },
+  [ErrorCode.ADMIN_MENU_BUILTIN_LOCKED]: { httpStatus: HttpStatus.UNPROCESSABLE_ENTITY, message: '内置菜单受保护，禁止该操作' },
+  [ErrorCode.ADMIN_MENU_PARENT_INVALID]: { httpStatus: HttpStatus.UNPROCESSABLE_ENTITY, message: '父级菜单非法（不存在、形成环或类型不符）' },
+  [ErrorCode.ADMIN_MENU_HAS_CHILDREN]: { httpStatus: HttpStatus.UNPROCESSABLE_ENTITY, message: '菜单含子级，禁止删除' },
+  [ErrorCode.ADMIN_DICT_TYPE_NOT_FOUND]: { httpStatus: HttpStatus.NOT_FOUND, message: '字典类型不存在' },
+  [ErrorCode.ADMIN_DICT_TYPE_CODE_CONFLICT]: { httpStatus: HttpStatus.CONFLICT, message: '字典编码已存在' },
+  [ErrorCode.ADMIN_DICT_TYPE_BUILTIN_LOCKED]: { httpStatus: HttpStatus.UNPROCESSABLE_ENTITY, message: '内置字典受保护，禁止该操作' },
+  [ErrorCode.ADMIN_DICT_ITEM_NOT_FOUND]: { httpStatus: HttpStatus.NOT_FOUND, message: '字典项不存在' },
+  [ErrorCode.ADMIN_DICT_VALUE_CONFLICT]: { httpStatus: HttpStatus.CONFLICT, message: '字典值已存在' },
+  [ErrorCode.ADMIN_CONFIG_NOT_FOUND]: { httpStatus: HttpStatus.NOT_FOUND, message: '配置项不存在' },
+  [ErrorCode.ADMIN_CONFIG_KEY_CONFLICT]: { httpStatus: HttpStatus.CONFLICT, message: '配置键已存在' },
+  [ErrorCode.ADMIN_CONFIG_BUILTIN_LOCKED]: { httpStatus: HttpStatus.UNPROCESSABLE_ENTITY, message: '内置配置受保护，禁止删除' },
+  [ErrorCode.ADMIN_CONFIG_VALUE_INVALID]: { httpStatus: HttpStatus.BAD_REQUEST, message: '配置值非法' },
+  [ErrorCode.ADMIN_CRUD_RESOURCE_NOT_FOUND]: { httpStatus: HttpStatus.NOT_FOUND, message: 'CRUD 资源未注册' },
+  [ErrorCode.ADMIN_CRUD_FIELD_INVALID]: { httpStatus: HttpStatus.BAD_REQUEST, message: '字段校验失败' },
+  [ErrorCode.ADMIN_CRUD_MODEL_MISSING]: { httpStatus: HttpStatus.INTERNAL_SERVER_ERROR, message: 'CRUD 数据模型缺失（配置错误）' },
+  [ErrorCode.ADMIN_CRUD_RESOURCE_READONLY]: { httpStatus: HttpStatus.UNPROCESSABLE_ENTITY, message: '只读资源禁止写操作' },
+  [ErrorCode.ADMIN_BIND_USER_NOT_FOUND]: { httpStatus: HttpStatus.NOT_FOUND, message: '待绑定用户不存在' },
 
   [ErrorCode.NOT_FOUND]: { httpStatus: HttpStatus.NOT_FOUND, message: '资源不存在' },
   [ErrorCode.CONFLICT]: { httpStatus: HttpStatus.CONFLICT, message: '资源状态冲突' },

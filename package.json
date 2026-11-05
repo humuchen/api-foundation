@@ -33,6 +33,10 @@
       "types": "./dist/modules/user/index.d.ts",
       "import": "./dist/modules/user/index.js"
     },
+    "./modules/admin": {
+      "types": "./dist/modules/admin/index.d.ts",
+      "import": "./dist/modules/admin/index.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
